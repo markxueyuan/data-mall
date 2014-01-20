@@ -1,6 +1,6 @@
 # data-mall
 
-A Clojure library designed to ... well, that part is up to you.
+This is a practice source pool of clojure, which collects every piece of knowledge on data analysis in detail.
 
 ## Usage
 
