@@ -5,7 +5,7 @@
 
 (def phone-regex
   #"(?x)
-  \d{3}
+  (\d{3})
   \D{0,2}
   (\d{3})
   \D?
@@ -22,4 +22,11 @@
 (re-find phone-regex "123- 456-7890")
 
 (clean-us-phone "123-456-7890")
-
+
+(def puncture-regex
+  #"[^0-9a-zA-Z]")
+
+(re-find puncture-regex "398abAB,")
+
+(re-seq puncture-regex "398def")
+
