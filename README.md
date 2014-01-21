@@ -1,6 +1,7 @@
 # data-mall
 
-A Clojure library designed to ... well, that part is up to you.
+
+This is a practice source pool of clojure, which collects every piece of knowledge on data analysis in detail.
 
 ## Usage
 
@@ -10,4 +11,6 @@ FIXME
 
 Copyright © 2013 FIXME
 
-Distributed under the Eclipse Public License, the same as Clojure.
+
+Distributed under the Eclipse Public License either version 1.0 or (at
+your option) any later version.
