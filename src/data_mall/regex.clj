@@ -25,7 +25,12 @@
 
 (def puncture-regex
   #"[^0-9a-zA-Z]")
+(def re2 #"[0-9a-zA-Z\s]")
 
 (re-find puncture-regex "398abAB,")
 
-(re-seq puncture-regex "398def")
+(re-seq puncture-regex "398defs")
+
+(apply str (re-seq re2 "what is the fucking matter with you?%&*^*&(*)))OPhouhou who tu say what"))
+
+(re-seq re2 "ab@c ")
