@@ -8,14 +8,14 @@
 
 (def bb
   (->>
- (io/read-dataset "D:/training/pubmed-oa-subset.csv")
+ (io/read-dataset "E:/training/pubmed-oa-subset.csv")
  :rows
  first
  :col3))
 
 (def punc-regex  #"[,.\s;:-?!\/\\\"\'_\(\)\{\}\[\]@—\$&\^\*\+\t\r\n\a\e\f\v]")
 
-(incanter/view (io/read-dataset "D:/training/pubmed-oa-subset.csv"))
+(incanter/view (io/read-dataset "E:/training/pubmed-oa-subset.csv"))
 
 
 (seq "hahahah")
@@ -57,30 +57,48 @@
       (assoc row (keyword col-name) token)
        )))
 
-(def aa (read-text "D:/training/pubmed-oa-subset.csv" "col3"))
-
-(frequencies (apply concat (map :col3 aa)))
-
-(sort-map-by)
-
-
-(defn document-count-filter
-  )
+(defn sort-map-value
+  [map-obj]
+  (into (sorted-map-by (fn [key1 key2]
+                         (compare [(get map-obj key2) key2]
+                                  [(get map-obj key1) key1])))
+        map-obj))
 
 
+(defn heuristic-filter
+  [csv-file col-name]
+  (let [dataset (read-text csv-file col-name)]
+    (->> dataset
+         (map (keyword col-name))
+         (apply concat)
+         frequencies
+         sort-map-value
+         (drop 40)
+         (into {})
+         (filter #(> (val %) 5))
+         (into {})
+         keys
+         set
+         )))
+
+(heuristic-filter "E:/training/pubmed-oa-subset.csv" "col3")
+(#{1 2 3} 4)
 
 
-(defn xxx
-  [x]
-  (if (nil? x)
-    3
-    4))
+
+(def aa (read-text "E:/training/pubmed-oa-subset.csv" "col3"))
 
 
-(tokenizer sstt)
-(tokenizer bb)
 
-(string/lower-case "fafa#")
+
+
+
+(rest {:a 2 :b 3 :c 4})
+
+
+
+(filter #(<= (val %) 5) {:a 2 :b 3 :d 10})
+(filter [])
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;
@@ -88,17 +106,27 @@
 (string/upper-case "thk")
 (string/lower-case "THK")
 
-(#(string/split % punc-regex) sstt)
 
 (remove even? [2 3 4])
-
-hash-map
-(apply assoc {} [3 5 7 9 8 10])
-
-(apply assoc {} 3 4 5 60)
-
-(assoc {:3 4} :3 5)
+(filter even? [2 3 4])
 
 
 
 
+;;;please compare the following two
+
+(let [results {:A 1 :B 2 :C 2 :D 5 :E 1 :F 1}]
+  (into (sorted-map-by (fn [key1 key2]
+                         (compare (get results key2)
+                                  (get results key1))))
+        results))
+
+
+
+(let [results {:A 1 :B 2 :C 2 :D 5 :E 1 :F 1}]
+  (into (sorted-map-by (fn [key1 key2]
+                         (compare [(get results key2) key2]
+                                  [(get results key1) key1])))
+        results))
+
+;;;more information please search function sorted-map-by in clojuredocs.org
