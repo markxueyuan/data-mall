@@ -3,31 +3,10 @@
             [incanter.io :as io]
             [clojure.string :as string]))
 
-
-;;import the CSV data, turn it to a dataset of incanter and read the lines of it.
-
-(def bb
-  (->>
- (io/read-dataset "E:/training/pubmed-oa-subset.csv")
- :rows
- first
- :col3))
-
 (def punc-regex  #"[,.\s;:-?!\/\\\"\'_\(\)\{\}\[\]@—\$&\^\*\+\t\r\n\a\e\f\v]")
 
-(incanter/view (io/read-dataset "E:/training/pubmed-oa-subset.csv"))
+;(incanter/view (io/read-dataset "E:/training/pubmed-oa-subset.csv"))
 
-
-(seq "hahahah")
-
-(string/split "ha,hahah.gaga,wa_wa (go)by{crazy}is[tit]3@4—mama$100&fa
-              fa#"
-             punc-regex)
-
-(def sstt "ha,hahah.gaga,wa_wa(go)by{CGrazy}is[tit]3@4—mama$100&fa
-             fa#")
-
-(str " " "a")
 
 (defn tokenizer
   [text]
@@ -81,24 +60,21 @@
          set
          )))
 
-(heuristic-filter "E:/training/pubmed-oa-subset.csv" "col3")
-(#{1 2 3} 4)
+;(heuristic-filter "D:/training/pubmed-oa-subset.csv" "col3")
+
+;(read-text "D:/training/pubmed-oa-subset.csv" "col3")
+
+(defn data-ready
+  [csv-file col-name]
+  (let [flt (heuristic-filter csv-file col-name)]
+    (for [row (read-text csv-file col-name)]
+      (assoc row (keyword col-name) (filter #(flt %) (get row (keyword col-name))))
+    )))
+
+;(data-ready "D:/training/pubmed-oa-subset.csv" "col3")
 
 
 
-(def aa (read-text "E:/training/pubmed-oa-subset.csv" "col3"))
-
-
-
-
-
-
-(rest {:a 2 :b 3 :c 4})
-
-
-
-(filter #(<= (val %) 5) {:a 2 :b 3 :d 10})
-(filter [])
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;
