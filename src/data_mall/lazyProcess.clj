@@ -54,18 +54,18 @@
   (let [sql-n (str "select count(*) from " table-name ";")
         con (jdbc/get-connection db)
         db-con (jdbc/add-connection db con)
-        vol (jdbc/query db-con [sql-n])]
+        vol (second (first (first (jdbc/query db-con [sql-n]))))]
     (loop [x 0 u nil]
       (let [sql (str "select * from " table-name " limit 1 offset " x ";")
-            db-seq (jdbc/query db-con [sql])]
+            db-seq (first (jdbc/query db-con [sql]))]
         (if (>= x vol)
-          (.close con)
+          (do (.close con) u)
           (let [m (lazy-seq (cons db-seq u))]
-            (recur (+ x 1) m)))))))
+            (recur (+ x 1) m)
+            ))))))
 
-(str "a " 3)
 
-(lazy-seq (cons 4 (lazy-seq (cons 2 (cons 1 nil)))))
+
 
 
 
