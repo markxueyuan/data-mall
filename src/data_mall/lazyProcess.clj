@@ -18,7 +18,7 @@
   (with-open [in-file (io/reader csv-file)]
     (frequencies (map #(nth % 1) (csv/read-csv in-file)))))
 
-(lazy-read-ok "D:/data/previews.csv")
+;(lazy-read-ok "D:/data/previews.csv")
 
 
 (defn lazy-read-csv
@@ -32,7 +32,7 @@
                   (.close in-file))))]
     (lazy csv-seq)))
 
-(lazy-read-csv "D:/data/previews.csv")
+;(lazy-read-csv "D:/data/previews.csv")
 
 
 
@@ -54,17 +54,42 @@
   (let [sql-n (str "select count(*) from " table-name ";")
         con (jdbc/get-connection db)
         db-con (jdbc/add-connection db con)
-        vol (second (first (first (jdbc/query db-con [sql-n]))))]
-    (loop [x 0 u nil]
-      (let [sql (str "select * from " table-name " limit 1 offset " x ";")
-            db-seq (first (jdbc/query db-con [sql]))]
-        (if (>= x vol)
-          (do (.close con) u)
-          (let [m (lazy-seq (cons db-seq u))]
-            (recur (+ x 1) m)
-            ))))))
+        vol (second (first (first (jdbc/query db-con [sql-n]))))
+        sql (fn sql [x] (str "select * from " table-name " limit 1 offset " x ";"))
+        query (fn [sql] (first (jdbc/query db-con [sql])))
+        s (lazy-seq (take vol (iterate inc 0)))
+        lazy (fn lazy [wrapped]
+               (lazy-seq
+                  (cons (query (sql (first wrapped))) (lazy (rest wrapped)))))]
+    (lazy s)))
+
+#_(defn lazy-read-db2
+  [db table-name interval]
+  (let [sql-n (str "select count(*) from " table-name ";")
+        con (jdbc/get-connection db)
+        db-con (jdbc/add-connection db con)
+        vol (second (first (first (jdbc/query db-con [sql-n]))))
+        sql (fn sql [x] (str "select * from " table-name " limit " interval " offset " x ";"))
+        query (fn [sql]  (jdbc/query db-con [sql]))
+        s (lazy-seq (take (+ 1 (/ vol interval)) (iterate #(+ % interval) 0)))
+        lazy (fn lazy [wrapped]
+               (lazy-seq
+                  (reduce into (query (sql (first wrapped))) (lazy (rest wrapped)))))]
+    (lazy s)))
 
 
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;
+
+;how to merge two maps together
+
+ (into {:a 2 :b 3} {:c 4 :d 5})
 
 
 

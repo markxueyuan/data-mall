@@ -19,7 +19,8 @@
 
 
 
-
+
+
 
 ;;;;;;;;;;;;;;;;not that smart;;;;;;;;;;;;;;;;;;
 
@@ -32,5 +33,6 @@
 ;(def dd (io/read-dataset "D:/data/all_160_in_51.P35.csv" :header true))
 
 ;(incanter/view dd)
+
 
 
