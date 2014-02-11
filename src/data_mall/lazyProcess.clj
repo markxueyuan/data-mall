@@ -1,7 +1,15 @@
 (ns data-mall.lazyProcess
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
-            [clojure.java.jdbc :as jdbc]))
+            [clojure.java.jdbc :as jdbc]
+            [clojure.string :as string]))
+
+(def db-spec
+  {:classname "com.mysql.jdbc.Driver"
+   :subprotocol "mysql"
+   :subname "//localhost:3306/test"
+   :user "root"
+   :password "othniel"})
 
 (defn lazy-read-bad-1
   [csv-file]
@@ -32,7 +40,29 @@
                   (.close in-file))))]
     (lazy csv-seq)))
 
+(defn col-name
+  [seq]
+  (map keyword (map string/lower-case (map #(string/replace % #"\s" "-") (first seq)))))
+
+(defn map-it
+  [seq]
+  (map #(zipmap (col-name seq) %) (rest seq)))
+
+
+
+
+(map-it (lazy-read-csv "D:/data/WDI_Data.csv"))
+(col-name (lazy-read-csv "D:/data/WDI_Data.csv"))
+(lazy-read-csv "D:/data/WDI_Data.csv")
+
+
+
+
 ;(lazy-read-csv "D:/data/previews.csv")
+(col-name (lazy-read-csv "D:/data/WDI_Data.csv"))
+(jdbc )
+
+
 
 
 

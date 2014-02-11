@@ -33,7 +33,7 @@
 
 ;;;;;;;;csv file address ;;;;;;;
 
-(def address-1 "E:/数据/朴睿/analysis.csv")
+(def address-1 "D:/data/analysis.csv")
 
 ;;;;;;zone of sqls;;;;;;;
 

@@ -3,19 +3,19 @@
 (require '[incanter.core :as incanter]
          '[incanter.io :as io])
 
-(def bb (io/read-dataset "D:/data/small-sample.csv"))
+;(def bb (io/read-dataset "D:/data/small-sample.csv"))
 
 
 
 
-(def cc (io/read-dataset "D:/data/small-sample-header.csv" :header true))
+;def cc (io/read-dataset "D:/data/small-sample-header.csv" :header true))
 
-(incanter/view cc)
+;(incanter/view cc)
 
 
-(def dd (io/read-dataset "D:/data/all_160_in_51.P35.csv" :header true))
+;(def dd (io/read-dataset "D:/data/all_160_in_51.P35.csv" :header true))
 
-(incanter/view dd)
+;(incanter/view dd)
 
 
 

@@ -11,10 +11,10 @@
 
 (def census2012 (incanter/$ [:STATE :NAME :POP100 :P003002 :P003003 :P003004 :P003005 :P003006 :P003007 :P003008] race-data))
 
-(incanter/view census2012)
-(incanter/col-names census2012)
+;(incanter/view census2012)
+;(incanter/col-names census2012)
 
-(incanter/to-list census2012)
+;(incanter/to-list census2012)
 
 (with-open [f-out (javaio/writer "D:/data/census-2012.csv")]
   (csv/write-csv f-out [(map name (incanter/col-names census2012))])
