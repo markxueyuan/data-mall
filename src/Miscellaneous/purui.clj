@@ -13,6 +13,7 @@
 
 (def formatter1 (tformat/formatters :mysql))
 
+
 ;;;;;;;;;;;db connection;;;;;;;;
 
 (def db-spec2
@@ -76,7 +77,7 @@
      )
 
 
-(tformat/unparse formatter1 "2012-12-12 12:22:16")
+(tformat/parse formatter1 "2010-03-11 12:22:22")
 
 
 
