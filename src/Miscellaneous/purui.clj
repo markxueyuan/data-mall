@@ -12,6 +12,9 @@
 ;;;;;;;;;;;time format;;;;;;;;;;
 
 (def formatter1 (tformat/formatters :mysql))
+(def formatter2 (tformat/formatter "yy/MM/dd"))
+
+
 
 
 ;;;;;;;;;;;db connection;;;;;;;;
@@ -38,6 +41,22 @@
   (let [tkey (keyword identifier)]
     (assoc entry tkey (cut-date-string (tkey entry)))))
 
+
+(defn sort-column
+  [last-key entry]
+  (let [results entry]
+    (into (sorted-map-by (fn [key1 key2]
+                           (if (= key1 last-key)
+                             1
+                             -1)))
+          results)))
+
+
+
+
+
+
+
 ;;;;;;;;csv file address ;;;;;;;
 
 (def address-1 "E:/数据/朴睿/analysis.csv")
@@ -46,7 +65,7 @@
 
 (def query-1 "select topic, count(*) as vol from purui0208_2013_spam_dupliremov group by topic;")
 (def query-2 "select kw, topic, count(*) as vol from purui0208_2013_spam_dupliremov group by kw order by topic, kw;")
-(def query-3 "select 'cartier', pubtime FROM purui0208_2013_spam_dupliremov")
+(def query-3 "select pubtime FROM purui0208_2013_spam_dupliremov")
 
 
 ;;;;;;;;;working area;;;;;;;
@@ -64,7 +83,7 @@
      (->csv address-1)
      )
 
-;cartier's distribution by time
+;distribution by time
 
 
 
@@ -72,12 +91,21 @@
      (map #(extract-date "pubtime" %))
      frequencies
      (map #(assoc (first %) :counts (second %)));mimic a standard jdbc output
-     (sort #(compare (:pubtime %1) (:pubtime %2)))
-     ;(->csv address-1)
+     (sort #(compare (tformat/parse formatter2 (:pubtime %1)) (tformat/parse formatter2 (:pubtime %2))));parse the time to compare
+     ;(map #(sort-column :counts %))
+     ;(->csv address-1);write to csv
+     ;(incanter/to-dataset)
+     ;(incanter/view)
+     ;(incanter/to-list)
+     first
+     (sort-column :counts)
      )
 
 
-(tformat/parse formatter1 "2010-03-11 12:22:22")
+
+
+
+ (into {} (sort-by first {:b 3 :a 2}))
 
 
 

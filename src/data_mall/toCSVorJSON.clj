@@ -21,7 +21,7 @@
   (csv/write-csv f-out (incanter/to-list census2012)))
 
 
-(->
+#_(->
  (:rows census2012)
  first)
 
@@ -37,6 +37,17 @@
   (csv/write-csv f-out [(map name (incanter/col-names datasets))])
   (csv/write-csv f-out (incanter/to-list datasets)))
   )
+
+(defn toCSV2
+  [resultsets output]
+   (with-open [f-out (javaio/writer output)]
+     (csv/write-csv f-out [(map name (incanter/col-names datasets))])
+  (csv/write-csv f-out (incanter/to-list datasets)))
+  )
+
+(keys )
+
+(incanter/to-list [{:a 2 :b 3 :c 4} {:a 5 :b 7 :c 9}])
 
 ;(require '[data-mall.scrapeTable :as scrapeTable])
 
