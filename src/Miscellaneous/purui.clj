@@ -13,11 +13,19 @@
 
 (def formatter1 (tformat/formatters :mysql))
 (def formatter2 (tformat/formatter "yy/MM/dd"))
+(def formatter3 (tformat/formatter "yy-MM-dd"))
 
 
 
 
 ;;;;;;;;;;;db connection;;;;;;;;
+
+(def db-spec1
+  {:classname "com.mysql.jdbc.Driver"
+   :subprotocol "mysql"
+   :subname "//localhost:3306/doubancomment"
+   :user "root"
+   :password "othniel"})
 
 (def db-spec2
   {:classname "com.mysql.jdbc.Driver"
@@ -51,6 +59,14 @@
                              -1)))
           results)))
 
+(defn correct-nil
+  [stuff col-key entry]
+  (if (nil? (col-key entry))
+    (assoc entry col-key stuff)
+  entry))
+
+
+
 
 
 
@@ -60,12 +76,15 @@
 ;;;;;;;;csv file address ;;;;;;;
 
 (def address-1 "E:/数据/朴睿/analysis.csv")
+(def address-2 "D:/data/analysis.csv")
 
 ;;;;;;zone of sqls;;;;;;;
 
 (def query-1 "select topic, count(*) as vol from purui0208_2013_spam_dupliremov group by topic;")
 (def query-2 "select kw, topic, count(*) as vol from purui0208_2013_spam_dupliremov group by kw order by topic, kw;")
 (def query-3 "select pubtime FROM purui0208_2013_spam_dupliremov")
+(def query-4 "SELECT time FROM dfl;")
+(def query-5 "SELECT score,vote FROM dfl;")
 
 
 ;;;;;;;;;working area;;;;;;;
@@ -101,11 +120,16 @@
      (sort-column :counts)
      )
 
+;why not forget incanter?
+(->> (jdbc/query db-spec1 [query-4])
+     frequencies
+     (map #(assoc (first %) :counts (second %)))
+     (map #(correct-nil "1900-1-1" :time %))
+     (sort #(compare (tformat/parse formatter3 (:time %1)) (tformat/parse formatter3 (:time %2))))
+     (toCSV/toCSV2 [:time :counts] address-2)
+     )
 
 
-
-
- (into {} (sort-by first {:b 3 :a 2}))
 
 
 
