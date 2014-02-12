@@ -5,7 +5,13 @@
             [data-mall.toCSVorJSON :as toCSV]
             [clojure.java.io :as javaio]
             [clojure.string :as string]
+            [clj-time.core :as t]
+            [clj-time.format :as tformat]
             ))
+
+;;;;;;;;;;;time format;;;;;;;;;;
+
+(def formatter1 (tformat/formatters :mysql))
 
 ;;;;;;;;;;;db connection;;;;;;;;
 
@@ -33,7 +39,7 @@
 
 ;;;;;;;;csv file address ;;;;;;;
 
-(def address-1 "D:/data/analysis.csv")
+(def address-1 "E:/数据/朴睿/analysis.csv")
 
 ;;;;;;zone of sqls;;;;;;;
 
@@ -66,12 +72,14 @@
      frequencies
      (map #(assoc (first %) :counts (second %)));mimic a standard jdbc output
      (sort #(compare (:pubtime %1) (:pubtime %2)))
-     (->csv address-1)
+     ;(->csv address-1)
      )
 
 
+(tformat/unparse formatter1 "2012-12-12 12:22:16")
 
-(jdbc/query db-spec2 [query-3])
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;

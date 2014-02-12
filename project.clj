@@ -17,7 +17,8 @@
                  [clj-diff "1.0.0-SNAPSHOT"]
                  [stanford/classifier "3.3.1"]
                  [stanford/tmt "0.4.0"]
-                 ]
+                 [clj-time "0.6.0"]]
+
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
  ; :resource-paths ["src/main/resource"]
 

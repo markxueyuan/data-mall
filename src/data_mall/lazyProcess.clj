@@ -51,16 +51,16 @@
 
 
 
-(map-it (lazy-read-csv "D:/data/WDI_Data.csv"))
-(col-name (lazy-read-csv "D:/data/WDI_Data.csv"))
-(lazy-read-csv "D:/data/WDI_Data.csv")
+;(map-it (lazy-read-csv "D:/data/WDI_Data.csv"))
+;(col-name (lazy-read-csv "D:/data/WDI_Data.csv"))
+;(lazy-read-csv "D:/data/WDI_Data.csv")
 
 
 
 
 ;(lazy-read-csv "D:/data/previews.csv")
-(col-name (lazy-read-csv "D:/data/WDI_Data.csv"))
-(jdbc )
+;(col-name (lazy-read-csv "D:/data/WDI_Data.csv"))
+;(jdbc )
 
 
 
