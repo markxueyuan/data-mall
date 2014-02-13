@@ -3,7 +3,8 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))}
+  :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))
+                 "mvn-repo" "http://ansjsun.github.io/mvn-repo/"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [incanter/incanter-core "1.5.4"]
                  [incanter/incanter-io "1.5.4"]
@@ -17,7 +18,9 @@
                  [clj-diff "1.0.0-SNAPSHOT"]
                  [stanford/classifier "3.3.1"]
                  [stanford/tmt "0.4.0"]
-                 [clj-time "0.6.0"]]
+                 [clj-time "0.6.0"]
+                 [org.ansj/ansj_seg "0.9"]
+                 ]
 
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
  ; :resource-paths ["src/main/resource"]

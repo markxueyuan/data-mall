@@ -3,6 +3,7 @@
             [incanter.core :as incanter]
             [clojure.java.jdbc :as jdbc]
             [data-mall.toCSVorJSON :as toCSV]
+            [data-mall.ansj-seg :as word-seg]
             [clojure.java.io :as javaio]
             [clojure.string :as string]
             [clj-time.core :as t]
@@ -61,10 +62,9 @@
 
 (defn correct-nil
   [stuff col-key entry]
-  (if (nil? (col-key entry))
+  (if (or (= "" (col-key entry))(nil? (col-key entry)))
     (assoc entry col-key stuff)
   entry))
-
 
 
 
@@ -85,6 +85,8 @@
 (def query-3 "select pubtime FROM purui0208_2013_spam_dupliremov")
 (def query-4 "SELECT time FROM dfl;")
 (def query-5 "SELECT score,vote FROM dfl;")
+(def query-6 "SELECT topic, kw, preview FROM purui0208_2013_spam_dupliremov;")
+(def query-7 "SELECT * FROM purui0208_2013_spam_dupliremov;")
 
 
 ;;;;;;;;;working area;;;;;;;
@@ -116,12 +118,13 @@
      ;(incanter/to-dataset)
      ;(incanter/view)
      ;(incanter/to-list)
-     first
-     (sort-column :counts)
+     ;first
+     ;(sort-column :counts)
+     (toCSV/toCSV2 [:pubtime :counts] address-1)
      )
 
 ;why not forget incanter?
-(->> (jdbc/query db-spec1 [query-4])
+#_(->> (jdbc/query db-spec1 [query-4])
      frequencies
      (map #(assoc (first %) :counts (second %)))
      (map #(correct-nil "1900-1-1" :time %))
@@ -129,9 +132,25 @@
      (toCSV/toCSV2 [:time :counts] address-2)
      )
 
+;calculate the word frequencies
+
+(->> (jdbc/query db-spec2 [query-6])
+     (map #(correct-nil "uk" :preview %))
+     (map #(word-seg/word-seg :preview %))
+     (mapcat :word-seg)
+     (map #(correct-nil "uk" :nature %))
+     (map #(correct-nil "uk" :word %))
+     (remove #(> 2 (count (:word %))))
+     frequencies
+     (map #(assoc (first %) :counts (second %)))
+     (sort #(> (:counts %1) (:counts %2)))
+     (toCSV/toCSV2 [:word :nature :counts] address-1)
+     )
 
 
+(->> (jdbc/query db-spec2 [query-7]))
 
+(jdbc/query db-spec2 [query-7])
 
 
 
@@ -170,3 +189,5 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;not that smart;;;;;;;;;;;;;;;;;;;;;;;;
 (string/split "1012-3-4 12:22" #"\s")
+
+

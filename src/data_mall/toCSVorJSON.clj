@@ -16,7 +16,7 @@
 
 ;(incanter/to-list census2012)
 
-(with-open [f-out (javaio/writer "D:/data/census-2012.csv")]
+#_(with-open [f-out (javaio/writer "D:/data/census-2012.csv")]
   (csv/write-csv f-out [(map name (incanter/col-names census2012))])
   (csv/write-csv f-out (incanter/to-list census2012)))
 
@@ -25,7 +25,7 @@
  (:rows census2012)
  first)
 
-(with-open [f-out (javaio/writer "D:/data/census-2012.json")]
+#_(with-open [f-out (javaio/writer "D:/data/census-2012.json")]
   (json/write (:rows census2012) f-out))
 
 
