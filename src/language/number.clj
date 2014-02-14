@@ -59,8 +59,24 @@ l
 (identical? 127 127)
 ;this is called fixnums
 
+;reference equality
+(= {:a 1 :b ["hi"]}
+   (into (sorted-map) [[:b ["hi"]] [:a 1]])
+   (doto (java.util.HashMap.)
+     (.put :a 1)
+     (.put :b ["hi"])
+     )
+   )
 
 
-(into {:a 2 :b 3 :c 4} {:a 2 :b 3 :d 5})
+
+
+
+
+
+
+
+
+
 
 
