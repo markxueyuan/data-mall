@@ -66,6 +66,19 @@
     (assoc entry col-key stuff)
   entry))
 
+(defn cp
+  [set1 set2 key1 key2]
+  (let [c (fn [key s1 s2] (compare (key (first s1)) (key (first s2))))]
+    (loop [s1 set1 s2 set2 col []]
+      (let [e1 (first s1) e2 (first s2)]
+            (if (or (nil? e1) (nil? e2))
+              col
+              (cond (> (c key1 set1 set2) 0) (recur s1 (rest s2) col)
+                    (< (c key1 set1 set2) 0) (recur (rest s1) s2 col)
+                    (> (c key2 set1 set2) 0) (recur s1 (rest s2) col)
+                    (< (c key2 set1 set2) 0) (recur (rest s1) s2 col)
+                    (= (c key2 set1 set2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2)))))))))
+
 
 
 
@@ -87,6 +100,8 @@
 (def query-5 "SELECT score,vote FROM dfl;")
 (def query-6 "SELECT topic, kw, preview FROM purui0208_2013_spam_dupliremov;")
 (def query-7 "SELECT * FROM purui0208_2013_spam_dupliremov;")
+(def query-8 "SELECT brand,pubtime FROM purui0208_2013_spam;")
+(def query-9 "SELECT brand, pubtime FROM purui0214_2013_spam_dupliremov_media;")
 
 
 ;;;;;;;;;working area;;;;;;;
@@ -94,13 +109,13 @@
 
 ;group by topic
 
-(->> (jdbc/query db-spec2 [query-1])
+#_(->> (jdbc/query db-spec2 [query-1])
      (->csv address-1)
      )
 
 ;group by keyword
 
-(->> (jdbc/query db-spec2 [query-2])
+#_(->> (jdbc/query db-spec2 [query-2])
      (->csv address-1)
      )
 
@@ -108,7 +123,7 @@
 
 
 
-(->> (jdbc/query db-spec2 [query-3])
+#_(->> (jdbc/query db-spec2 [query-3])
      (map #(extract-date "pubtime" %))
      frequencies
      (map #(assoc (first %) :counts (second %)));mimic a standard jdbc output
@@ -134,7 +149,7 @@
 
 ;calculate the word frequencies
 
-(->> (jdbc/query db-spec2 [query-6])
+#_(->> (jdbc/query db-spec2 [query-6])
      (map #(correct-nil "uk" :preview %))
      (map #(word-seg/word-seg :preview %))
      (mapcat :word-seg)
@@ -148,9 +163,41 @@
      )
 
 
-(->> (jdbc/query db-spec2 [query-7]))
+(def set1
+  (->> (jdbc/query db-spec2 [query-8])
+       (map #(extract-date "pubtime" %))
+       frequencies
+       (map #(assoc (first %) :all-counts (second %)))
+       (map #(correct-nil "1900-1-1" :pubtime %))
+       (sort-by (juxt :brand :pubtime))
+     ))
 
-(jdbc/query db-spec2 [query-7])
+set1
+
+(def set2
+  (->> (jdbc/query db-spec2 [query-9])
+       (map #(extract-date "pubtime" %))
+       frequencies
+       (map #(assoc (first %) :unique-counts (second %)))
+       (map #(correct-nil "1900-1-1" :pubtime %))
+       (sort-by (juxt :brand :pubtime))
+     ))
+set2
+
+
+
+
+
+
+
+#_(->> (cp set1 set2 :brand :pubtime)
+     (toCSV/toCSV2 [:brand :pubtime :all-counts :unique-counts] address-1)
+     )
+
+
+
+
+
 
 
 

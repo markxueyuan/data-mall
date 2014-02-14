@@ -30,3 +30,37 @@ l
 (* 100 (bigdec l))
 (* 0.5M 1e403M)
 
+;autopromoting
+
+(inc' k)
+
+(inc' 1)
+
+;unchecked-*
+
+(unchecked-dec (unchecked-inc Long/MAX_VALUE))
+
+;rounding
+
+(with-precision 300 (/ 22M 3))
+
+
+;object identity
+(identical? "foot" (str "fo" "ot"))
+
+(let [a (range 10)]
+  (identical? a a))
+
+(identical? 5/4 (+ 3/4 1/2))
+
+(identical? 5.4321 5.4321)
+
+;dada, miracles happen below,
+(identical? 127 127)
+;this is called fixnums
+
+
+
+(into {:a 2 :b 3 :c 4} {:a 2 :b 3 :d 5})
+
+
