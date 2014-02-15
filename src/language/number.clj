@@ -65,15 +65,59 @@ l
    (doto (java.util.HashMap.)
      (.put :a 1)
      (.put :b ["hi"])
-     )
-   )
+     ))
+
+;numbers of same cateogry are equal, although they have different types.
+
+(= 1 1N (Integer. 1) (Short. (short 1)) (Byte. (byte 1)))
 
 
+;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;
+
+;if you want to instant a data type class, you have to give it a correspondent primitive type first
+
+#_(short. 1) ;will make an error
+
+;however, different categories cannot equal
+
+(= 1 1.0)
+(= 1N 1M)
+(= 1.25 5/4)
+
+;numerical equivalence
 
 
+(== 1 1.0)
+(== 1N 1M)
+(== 1.25 5/4)
 
+(defn equiv?
+  [& args]
+  (and (every? number? args)
+       (apply == args)))
 
+(equiv? "foo" "bar")
 
+;;clojure collections use numerical equals
+
+(into #{} [1 1N (Integer. 1) (Short. (short 1))])
+
+(into {}
+      [[1 :long]
+       [1N :bigint]
+       [(Integer. 1) :integer]])
+
+;;;;pay attention!
+(+ 0.1 0.2)
+
+(double (float 1.1))
+
+(= 1.1 (float 1.1))
+
+(defn foo [a] 0)
+
+(class foo)
+(seq (.getDeclaredMethods (class foo)))
 
 
 
