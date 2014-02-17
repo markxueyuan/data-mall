@@ -66,22 +66,33 @@
     (assoc entry col-key stuff)
   entry))
 
-(defn cp
-  [set1 set2 key1 key2]
+(defn cp2
+  [set1 set2 key1 key2 k-1 k-2]
   (let [c (fn [key s1 s2] (compare (key (first s1)) (key (first s2))))]
     (loop [s1 set1 s2 set2 col []]
       (let [e1 (first s1) e2 (first s2)]
             (if (or (nil? e1) (nil? e2))
               col
-              (cond (> (c key1 set1 set2) 0) (recur s1 (rest s2) col)
-                    (< (c key1 set1 set2) 0) (recur (rest s1) s2 col)
-                    (> (c key2 set1 set2) 0) (recur s1 (rest s2) col)
-                    (< (c key2 set1 set2) 0) (recur (rest s1) s2 col)
-                    (= (c key2 set1 set2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2)))))))))
+              (cond (> (c key1 s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
+                    (< (c key1 s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
+                    (> (c key2 s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
+                    (< (c key2 s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
+                    (= (c key2 s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2)))))))))
+
+(defn cp1
+  [set1 set2 key k-1 k-2]
+  (let [c (fn [key s1 s2] (compare (key (first s1)) (key (first s2))))]
+    (loop [s1 set1 s2 set2 col []]
+      (let [e1 (first s1) e2 (first s2)]
+            (if (or (nil? e1) (nil? e2))
+              col
+              (cond (> (c key s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
+                    (< (c key s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
+                    (= (c key s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2)))))))))
 
 
 
-
+(assoc {:a 1 :b 2} :c 3)
 
 
 
@@ -102,6 +113,9 @@
 (def query-7 "SELECT * FROM purui0208_2013_spam_dupliremov;")
 (def query-8 "SELECT brand,pubtime FROM purui0208_2013_spam;")
 (def query-9 "SELECT brand, pubtime FROM purui0214_2013_spam_dupliremov_media;")
+(def query-10 "SELECT origin FROM purui0208_2013_spam;")
+(def query-11 "SELECT origin FROM purui0214_2013_spam_dupliremov_media;")
+
 
 
 ;;;;;;;;;working area;;;;;;;
@@ -162,7 +176,7 @@
      (toCSV/toCSV2 [:word :nature :counts] address-1)
      )
 
-
+;merge time tendency of raw data and clean data
 (def set1
   (->> (jdbc/query db-spec2 [query-8])
        (map #(extract-date "pubtime" %))
@@ -187,13 +201,35 @@ set2
 
 
 
-
-
-
-#_(->> (cp set1 set2 :brand :pubtime)
+(->> (cp2 set1 set2 :brand :pubtime :all-counts :unique-counts)
      (toCSV/toCSV2 [:brand :pubtime :all-counts :unique-counts] address-1)
      )
 
+;merge origin distribution of raw data and clean data
+
+(def set3
+  (->> (jdbc/query db-spec2 [query-10])
+       frequencies
+       (map #(assoc (first %) :all-counts (second %)))
+       (sort-by :origin)
+     ))
+
+set3
+
+(def set4
+  (->> (jdbc/query db-spec2 [query-11])
+       frequencies
+       (map #(assoc (first %) :unique-counts (second %)))
+       (sort-by :origin)
+     ))
+
+set4
+
+(->> (cp1 set3 set4 :origin :all-counts :unique-counts)
+     (sort #(> (:all-counts %1) (:all-counts %2)))
+     (toCSV/toCSV2 [:origin :all-counts :unique-counts] address-1)
+     )
+(cp1 set3 set4 :origin :all-counts :unique-counts)
 
 
 
