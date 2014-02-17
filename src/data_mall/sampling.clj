@@ -10,6 +10,10 @@
    :user "root"
    :password "othniel"})
 
+;;;;;;;;;;;;;;sqls;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def query-1 "SELECT * FROM dfl;")
+
 
 ;;;;;;;;;;;;;;fns;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -17,15 +21,36 @@
   [percent coll]
   (filter (fn [_] (<= (rand) percent)) coll))
 
+(defn rand-replace
+  [m kv]
+  (into (dissoc m (rand-nth (keys m))) [kv]))
 
-;;;;;;;;;;;;;;sqls;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn range-from
+  [x]
+  (map (partial + x) (range))
+  )
 
-(def query-1 "SELECT * FROM dfl;")
+(defn sample-amount
+  [k coll]
+  (->> coll
+       (drop k)
+       (map vector (range-from (inc k)))
+       (filter #(<= (rand) (/ k (first %))))
+       (reduce rand-replace
+               (into {} (map vector (range k) (take k coll))))
+       (sort-by first)
+       (map first)
+  ))
 
 ;;;;;;;;;;;;;;;working area;;;;;;;;;;;;;;;;;;
 
 #_(->> (jdbc/query db-spec1 [query-1])
-     (sample-percent 0.1)
-     count
+     ;(sample-percent 0.1)
+       (sample-amount 50)
+     ;count
      )
+
+(into {:a 2 :b 3} [[:c 4]])
+
+
 
