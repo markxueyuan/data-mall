@@ -16,17 +16,17 @@
 
 ;(incanter/to-list census2012)
 
-#_(with-open [f-out (javaio/writer "D:/data/census-2012.csv")]
-  (csv/write-csv f-out [(map name (incanter/col-names census2012))])
-  (csv/write-csv f-out (incanter/to-list census2012)))
+;(with-open [f-out (javaio/writer "D:/data/census-2012.csv")]
+  ;(csv/write-csv f-out [(map name (incanter/col-names census2012))])
+  ;(csv/write-csv f-out (incanter/to-list census2012)))
 
 
-#_(->
- (:rows census2012)
- first)
+;(->
+ ;(:rows census2012)
+ ;first)
 
-#_(with-open [f-out (javaio/writer "D:/data/census-2012.json")]
-  (json/write (:rows census2012) f-out))
+;(with-open [f-out (javaio/writer "D:/data/census-2012.json")]
+  ;(json/write (:rows census2012) f-out))
 
 
 
@@ -47,13 +47,21 @@
      (csv/write-csv f-out (map #(make-list %) resultsets)))
   ))
 
-
+(defn toCSV3
+  [key-vec output resultsets]
+  (let [make-list (fn [entry]
+                    ((apply juxt key-vec) entry))
+        to (fn [out entry] (csv/write-csv out (vector entry)))]
+   (with-open [f-out (javaio/writer output)]
+     (to f-out (map name key-vec))
+     (dorun (map #(to f-out %) (map #(make-list %) resultsets)))
+     )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;fn juxt takes a set of functions and juxtpose them together to call for same value
 
-((juxt :a :b :c) {:a 2 :b 3})
+;((juxt :a :b :c) {:a 2 :b 3})
 
 
 

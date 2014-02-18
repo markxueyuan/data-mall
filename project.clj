@@ -23,6 +23,7 @@
                  ]
 
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
+  :jvm-opts ["-Xmx1g"]
  ; :resource-paths ["src/main/resource"]
 
   )

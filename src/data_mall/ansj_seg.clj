@@ -30,9 +30,10 @@
         mapped (map mapper seg)]
     (into entry {:word-seg mapped})))
 
-(word-seg :c {:a 12345 :b "hahahah" :c "我作为一个中国人是无比自豪的！"})
+;(word-seg :c {:a 12345 :b "hahahah" :c "我作为一个中国人是无比自豪的！"})
 
 
 
 
 
+;(word-seg :a {:a "这个很有用奥"})

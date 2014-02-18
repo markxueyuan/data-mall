@@ -3,6 +3,7 @@
             [incanter.core :as incanter]
             [clojure.java.jdbc :as jdbc]
             [data-mall.toCSVorJSON :as toCSV]
+            [data-mall.lazyProcess :as fromCSV]
             [data-mall.ansj-seg :as word-seg]
             [clojure.java.io :as javaio]
             [clojure.string :as string]
@@ -66,29 +67,49 @@
     (assoc entry col-key stuff)
   entry))
 
+
+
 (defn cp2
   [set1 set2 key1 key2 k-1 k-2]
   (let [c (fn [key s1 s2] (compare (key (first s1)) (key (first s2))))]
     (loop [s1 set1 s2 set2 col []]
       (let [e1 (first s1) e2 (first s2)]
-            (if (or (nil? e1) (nil? e2))
-              col
-              (cond (> (c key1 s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
-                    (< (c key1 s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
-                    (> (c key2 s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
-                    (< (c key2 s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
-                    (= (c key2 s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2)))))))))
+            (cond (and (nil? e1) (not (nil? e2))) (reduce #(merge %1 %2) col (map #(assoc % k-1 0) s2))
+                  (and (not (nil? e1)) (nil? e2)) (reduce #(merge %1 %2) col (map #(assoc % k-2 0) s1))
+                  (and (nil? e1) (nil? e2)) col
+                  (> (c key1 s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
+                  (< (c key1 s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
+                  (> (c key2 s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
+                  (< (c key2 s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
+                  (= (c key2 s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2))))))))
 
 (defn cp1
   [set1 set2 key k-1 k-2]
   (let [c (fn [key s1 s2] (compare (key (first s1)) (key (first s2))))]
     (loop [s1 set1 s2 set2 col []]
       (let [e1 (first s1) e2 (first s2)]
-            (if (or (nil? e1) (nil? e2))
-              col
-              (cond (> (c key s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
-                    (< (c key s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
-                    (= (c key s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2)))))))))
+            (cond (and (nil? e1) (not (nil? e2))) (reduce #(merge %1 %2) col (map #(assoc % k-1 0) s2))
+                  (and (not (nil? e1)) (nil? e2)) (reduce #(merge %1 %2) col (map #(assoc % k-2 0) s1))
+                  (and (nil? e1) (nil? e2)) col
+                  (> (c key s1 s2) 0) (recur s1 (rest s2) (conj col (assoc e2 k-1 0)))
+                  (< (c key s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
+                  (= (c key s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2))))))))
+
+(defn csv-key
+  [resultset]
+  (map keyword (first resultset)))
+
+(defn map-csv
+  [resultset]
+  (let [csv-key (map keyword (first resultset))]
+    (map #(zipmap csv-key %) (rest resultset))))
+
+(defn url-hash
+  [url-col entry]
+  (let [h (hash (url-col entry))]
+    (assoc entry :url-hash h)))
+
+(url-hash :url {:url "http://torrentkitty.com"})
 
 
 
@@ -160,7 +181,7 @@
 
 ;calculate the word frequencies
 
-#_(->> (jdbc/query db-spec2 [query-6])
+(->> (jdbc/query db-spec2 [query-6])
      (map #(correct-nil "uk" :preview %))
      (map #(word-seg/word-seg :preview %))
      (mapcat :word-seg)
@@ -174,7 +195,7 @@
      )
 
 ;merge time tendency of raw data and clean data
-(def set1
+#_(def set1
   (->> (jdbc/query db-spec2 [query-8])
        (map #(extract-date "pubtime" %))
        frequencies
@@ -183,9 +204,9 @@
        (sort-by (juxt :brand :pubtime))
      ))
 
-set1
+;set1
 
-(def set2
+#_(def set2
   (->> (jdbc/query db-spec2 [query-9])
        (map #(extract-date "pubtime" %))
        frequencies
@@ -193,43 +214,61 @@ set1
        (map #(correct-nil "1900-1-1" :pubtime %))
        (sort-by (juxt :brand :pubtime))
      ))
-set2
+;set2
 
 
 
 
-(->> (cp2 set1 set2 :brand :pubtime :all-counts :unique-counts)
+#_(->> (cp2 set1 set2 :brand :pubtime :all-counts :unique-counts)
      (toCSV/toCSV2 [:brand :pubtime :all-counts :unique-counts] address-1)
      )
 
 ;merge origin distribution of raw data and clean data
 
-(def set3
+#_(def set3
   (->> (jdbc/query db-spec2 [query-10])
        frequencies
        (map #(assoc (first %) :all-counts (second %)))
        (sort-by :origin)
      ))
 
-set3
+;set3
 
-(def set4
+#_(def set4
   (->> (jdbc/query db-spec2 [query-11])
        frequencies
        (map #(assoc (first %) :unique-counts (second %)))
        (sort-by :origin)
      ))
 
-set4
+;set4
 
-(->> (cp1 set3 set4 :origin :all-counts :unique-counts)
+#_(->> (cp1 set3 set4 :origin :all-counts :unique-counts)
      (sort #(> (:all-counts %1) (:all-counts %2)))
-     (toCSV/toCSV2 [:origin :all-counts :unique-counts] address-1)
+     (toCSV/toCSV2 [:origin :all-counts :unique-counts] address-1))
+
+(->> (fromCSV/lazy-read-csv "E:/数据/朴睿/everything.csv/everything.csv")
+     ;(drop 2000)
+     map-csv
+     (map #(correct-nil "uk" :extracted %))
+     (remove #(= (:extracted %) "uk"))
+     ;first
+     ;(word-seg/word-seg :extracted)
+     (take 20)
+     (map (partial url-hash :url))
+     (map #(word-seg/word-seg :extracted %))
+     (map #(assoc {} :wordseg (:word-seg %) :url-hash (:url-hash %)))
+
+     ;(mapcat :word-seg)
+     ;(remove #(> 2 (count (:word %))))
+     ;frequencies
+     ;(map #(assoc (first %) :counts (second %)))
+     ;(sort #(> (:counts %1) (:counts %2)))
+     ;dorun
+     ;(map :word-seg)
+     ;count
+     ;(toCSV/toCSV2 [:word :nature :counts] address-1)
      )
-(cp1 set3 set4 :origin :all-counts :unique-counts)
-
-
-
 
 
 

@@ -119,7 +119,7 @@
 
 ;how to merge two maps together
 
- (into {:a 2 :b 3} {:c 4 :d 5})
+ ;(into {:a 2 :b 3} {:c 4 :d 5})
 
 
 
