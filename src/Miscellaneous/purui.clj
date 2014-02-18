@@ -95,6 +95,16 @@
                   (< (c key s1 s2) 0) (recur (rest s1) s2 (conj col (assoc e1 k-2 0)))
                   (= (c key s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2))))))))
 
+(defn inner-join-1
+  [set1 set2 key]
+  (let [c (fn [key s1 s2] (compare (key (first s1)) (key (first s2))))]
+    (loop [s1 set1 s2 set2 col []]
+      (let [e1 (first s1) e2 (first s2)]
+            (cond (or (nil? e1) (nil? e2)) col
+                  (> (c key s1 s2) 0) (recur s1 (rest s2) col)
+                  (< (c key s1 s2) 0) (recur (rest s1) s2 col)
+                  (= (c key s1 s2) 0) (recur (rest s1) (rest s2) (conj col (into e1 e2))))))))
+
 (defn csv-key
   [resultset]
   (map keyword (first resultset)))
@@ -109,7 +119,12 @@
   (let [h (hash (url-col entry))]
     (assoc entry :url-hash h)))
 
-(url-hash :url {:url "http://torrentkitty.com"})
+(defn polygamy
+  [key1 key2 entry]
+  (let [husband (assoc {} key1 (key1 entry))]
+    (map #(into husband %) (key2 entry))))
+
+
 
 
 
@@ -272,9 +287,59 @@
      )
 
 
-(->> (jdbc/query db-spec2 [query-12])
+
+#_(->> (jdbc/query db-spec2 [query-12])
      (toCSV/toCSV2 [:origin :topic :brand :kw :pubtime :url] address-1)
      )
+
+
+
+(def set5 (->> (fromCSV/lazy-read-csv "D:/data/everything.csv")
+     map-csv
+     (map #(correct-nil "uk" :extracted %))
+     (remove #(= (:extracted %) "uk"))
+     ;first
+     ;(word-seg/word-seg :extracted)
+     ;(take 20)
+     (map (partial url-hash :url))
+     ;(map #(word-seg/word-seg :extracted %))
+     ;(map #(assoc {}  :url-hash (:url-hash %)))
+     (sort-by :url-hash)
+     ;(mapcat :word-seg)
+     ;(remove #(> 2 (count (:word %))))
+     ;frequencies
+     ;(map #(assoc (first %) :counts (second %)))
+     ;(sort #(> (:counts %1) (:counts %2)))
+     ;dorun
+     ;(map :word-seg)
+     ;count
+     ;(toCSV/toCSV2 [:word :nature :counts] address-1)
+     ))
+
+set5
+
+(def set6 (->> (fromCSV/lazy-read-csv "D:/data/puruifull.csv")
+     map-csv
+     (map (partial url-hash :url))
+     (sort-by :url-hash)
+     ))
+
+set6
+
+(->> (inner-join-1 set5 set6 :url-hash)
+     ;(take 20)
+     (map #(word-seg/word-seg :extracted %))
+     (map #(assoc {}  :brand (:brand %) :word-seg (:word-seg %)))
+     ;first
+     (map #(polygamy :brand :word-seg %))
+     (apply concat)
+     (remove #(> 2 (count (:word %))))
+     frequencies
+     (map #(assoc (first %) :counts (second %)))
+     (sort-by (juxt :brand :nature :counts))
+     (toCSV/toCSV2 [:brand :word :nature :counts] address-2)
+     )
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
