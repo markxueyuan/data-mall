@@ -133,6 +133,7 @@
 (def query-9 "SELECT brand, pubtime FROM purui0214_2013_spam_dupliremov_media;")
 (def query-10 "SELECT origin FROM purui0208_2013_spam;")
 (def query-11 "SELECT origin FROM purui0214_2013_spam_dupliremov_media;")
+(def query-12 "SELECT * FROM purui0208_2013_spam;")
 
 
 
@@ -247,7 +248,7 @@
      (sort #(> (:all-counts %1) (:all-counts %2)))
      (toCSV/toCSV2 [:origin :all-counts :unique-counts] address-1))
 
-(->> (fromCSV/lazy-read-csv "E:/数据/朴睿/everything.csv/everything.csv")
+#_(->> (fromCSV/lazy-read-csv "E:/数据/朴睿/everything.csv/everything.csv")
      ;(drop 2000)
      map-csv
      (map #(correct-nil "uk" :extracted %))
@@ -271,7 +272,9 @@
      )
 
 
-
+(->> (jdbc/query db-spec2 [query-12])
+     (toCSV/toCSV2 [:origin :topic :brand :kw :pubtime :url] address-1)
+     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
