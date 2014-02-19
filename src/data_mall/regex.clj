@@ -34,3 +34,7 @@
 (apply str (re-seq re2 "what is the fucking matter with you?%&*^*&(*)))OPhouhou who tu say what"))
 
 (re-seq re2 "ab@c ")
+
+(re)
+
+(seq "我爱你,中国")

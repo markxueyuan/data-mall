@@ -39,24 +39,24 @@
 
 
 
-(def bb
+#_(def bb
   (jdbc/query db-spec ["select * from student"]))
 
 ;(incanter/view bb)
 
-(def cc
+#_(def cc
   (jdbc/query db-spec ["select sName from student where sName = ?" "Amy"]))
 
-(def dd
+#_(def dd
   (jdbc/query db-spec ["select * from student left outer join apply using(sID)"]))
 
-(def ee
+#_(def ee
   (jdbc/insert! db-spec :college {:cName "Renmin" :state "CN" :enrol 50000}))
 
-(def ff
+#_(def ff
   (jdbc/update! db-spec :college {:cName "Peking" :state "CN" :enrol nil} ["cName = ?" "Renmin"]))
 
-(def gg
+#_(def gg
   (jdbc/delete! db-spec :college ["cName = ?" "Peking"]))
 
 ;(def hh
@@ -73,17 +73,17 @@
       (let [db-con (jdbc/add-connection db con)]
         (jdbc/query db-con [sql])))))
 
-(load-table-data db-spec 'student)
+#_(load-table-data db-spec 'student)
 
-(def xx (load-table-data db-spec 'student))
+#_(def xx (load-table-data db-spec 'student))
 
-(incanter/to-dataset xx)
+#_(incanter/to-dataset xx)
 
-(incanter/view xx)
+#_(incanter/view xx)
 
 (defn create-new-table
   [db table-name fields]
-  (let [sql (str "create table " table-name " (" fields ");")]
+  (let [sql (str "create table " table-name " (" fields ") " "DEFAULT CHARSET=utf8;")]
     (with-open [con (jdbc/get-connection db)]
       (let [db-con (jdbc/add-connection db con)]
         (jdbc/db-do-commands db-con sql)))))
@@ -154,4 +154,5 @@
 
 
 
-
+
+

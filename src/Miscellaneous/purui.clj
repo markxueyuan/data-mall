@@ -9,6 +9,8 @@
             [clojure.string :as string]
             [clj-time.core :as t]
             [clj-time.format :as tformat]
+            [data-mall.synonym :as synonym]
+            [data-mall.connectDB3 :as connectDB3]
             ))
 
 ;;;;;;;;;;;time format;;;;;;;;;;
@@ -35,6 +37,8 @@
    :subname "//localhost:3306/purui"
    :user "root"
    :password "othniel"})
+
+(def db52 (connectDB3/connect52 "purui"))
 
 ;;;;;;;;;;;functions;;;;;;;;
 
@@ -125,8 +129,14 @@
     (map #(into husband %) (key2 entry))))
 
 
+(defn better-db-insert! [db-spec table resultset]
+  (let [args (concat [db-spec table] resultset)]
+    (apply jdbc/insert! args)))
 
-
+(defn clean-for-csv
+  [key entry]
+  (let [rep (string/replace (key entry) #"[\,\n]" "，")]
+    (assoc entry key rep)))
 
 
 
@@ -149,8 +159,29 @@
 (def query-10 "SELECT origin FROM purui0208_2013_spam;")
 (def query-11 "SELECT origin FROM purui0214_2013_spam_dupliremov_media;")
 (def query-12 "SELECT * FROM purui0208_2013_spam;")
+#_(connectDB3/create-new-table db-spec2
+                             "wordseg"
+                             (str "id INT NOT NULL AUTO_INCREMENT,"
+                                  "brand TEXT NULL,"
+                                  "word TEXT NULL,"
+                                  "nature TEXT NULL,"
+                                  "counts INT NULL,"
+                                  "PRIMARY KEY (id),"
+                                  "UNIQUE INDEX id_UNIQUE (id ASC)"))
+#_(connectDB3/create-new-table db52
+                             "testtesttest"
+                             (str "id INT NOT NULL AUTO_INCREMENT,"
+                                  "brand TEXT NULL,"
+                                  "word TEXT NULL,"
+                                  "nature TEXT NULL,"
+                                  "counts INT NULL,"
+                                  "PRIMARY KEY (id),"
+                                  "UNIQUE INDEX id_UNIQUE (id ASC)"
+                                  ))
 
-
+(def query-13 (str "select title,origin,topic,brand,preview,left(pubtime,10) as time,sum(count) as count "
+                   "from purui0214_2013_spam_dupliremov_media "
+                   "group by brand,origin,left(pubtime,10),title,preview;"))
 
 ;;;;;;;;;working area;;;;;;;
 
@@ -197,7 +228,7 @@
 
 ;calculate the word frequencies
 
-(->> (jdbc/query db-spec2 [query-6])
+#_(->> (jdbc/query db-spec2 [query-6])
      (map #(correct-nil "uk" :preview %))
      (map #(word-seg/word-seg :preview %))
      (mapcat :word-seg)
@@ -294,7 +325,7 @@
 
 
 
-(def set5 (->> (fromCSV/lazy-read-csv "D:/data/everything.csv")
+(def set5 (->> (fromCSV/lazy-read-csv "E:/data/everything.csv")
      map-csv
      (map #(correct-nil "uk" :extracted %))
      (remove #(= (:extracted %) "uk"))
@@ -318,7 +349,7 @@
 
 set5
 
-(def set6 (->> (fromCSV/lazy-read-csv "D:/data/puruifull.csv")
+(def set6 (->> (fromCSV/lazy-read-csv "E:/data/puruifull.csv")
      map-csv
      (map (partial url-hash :url))
      (sort-by :url-hash)
@@ -326,8 +357,9 @@ set5
 
 set6
 
-(->> (inner-join-1 set5 set6 :url-hash)
-     ;(take 20)
+;write into csv
+#_(->> (inner-join-1 set5 set6 :url-hash)
+     (take 20)
      (map #(word-seg/word-seg :extracted %))
      (map #(assoc {}  :brand (:brand %) :word-seg (:word-seg %)))
      ;first
@@ -336,9 +368,45 @@ set6
      (remove #(> 2 (count (:word %))))
      frequencies
      (map #(assoc (first %) :counts (second %)))
+     (map #(synonym/han :nature %))
+     (remove #(= (:nature %) "其他"))
+     (remove #(= (:nature %) "数量词"))
      (sort-by (juxt :brand :nature :counts))
-     (toCSV/toCSV2 [:brand :word :nature :counts] address-2)
+     (toCSV/toCSV2 [:brand :word :nature :counts] address-1)
      )
+
+;write into db 52
+
+
+
+#_(->> (inner-join-1 set5 set6 :url-hash)
+     (take 20)
+     (map #(word-seg/word-seg :extracted %))
+     (map #(assoc {}  :brand (:brand %) :word-seg (:word-seg %)))
+     ;first
+     (map #(polygamy :brand :word-seg %))
+     (apply concat)
+     (remove #(> 2 (count (:word %))))
+     frequencies
+     (map #(assoc (first %) :counts (second %)))
+     (map #(synonym/han :nature %))
+     (remove #(= (:nature %) "其他"))
+     (remove #(= (:nature %) "数量词"))
+     (sort-by (juxt :brand :nature :counts))
+     (better-db-insert! db52 :testtesttest)
+     ;(toCSV/toCSV2 [:brand :word :nature :counts] address-1)
+     )
+
+(->> (jdbc/query db-spec2 [query-13])
+     (juxt :title :origin :topic :brand :pubtime :count)
+     (map #(extract-date "pubtime" %))
+     frequencies
+     (map #(clean-for-csv :title %))
+     (toCSV/toCSV2 [:title :origin :topic :brand :pubtime :count] address-1)
+     )
+
+
+(jdbc/query db-spec2 [query-13])
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
