@@ -7,8 +7,8 @@
 ;dorun can coerce to run all side-effects but discard the head;
 (dorun (map identity (range 1e8)))
 
-;however, if we put this in a closure, and let the anonymous fn calls the lazy-seq repeatedly, the closure would have to
-;save a larger and larger realized lazy-seq, then the out-of-memory would happen,as follows:
+;however, if we put this in a closure, and let the anonymous fn calls the lazy-seq, the closure would have to
+;save a large realized lazy-seq, then the out-of-memory would happen,as follows:
 
 (defn f [g] (g))
 
