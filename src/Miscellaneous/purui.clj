@@ -11,6 +11,7 @@
             [clj-time.format :as tformat]
             [data-mall.synonym :as synonym]
             [data-mall.connectDB3 :as connectDB3]
+            [data-mall.pivot-table :as pt]
             ))
 
 ;;;;;;;;;;;time format;;;;;;;;;;
@@ -183,6 +184,8 @@
                    "from purui0214_2013_spam_dupliremov_media "
                    "group by brand,origin,left(pubtime,10),title,preview;"))
 
+(def query-14 "SELECT * FROM dfl;")
+
 ;;;;;;;;;working area;;;;;;;
 
 
@@ -325,7 +328,7 @@
 
 
 
-(def set5 (->> (fromCSV/lazy-read-csv "E:/data/everything.csv")
+#_(def set5 (->> (fromCSV/lazy-read-csv "D:/data/everything.csv")
      map-csv
      (map #(correct-nil "uk" :extracted %))
      (remove #(= (:extracted %) "uk"))
@@ -347,15 +350,15 @@
      ;(toCSV/toCSV2 [:word :nature :counts] address-1)
      ))
 
-set5
+;set5
 
-(def set6 (->> (fromCSV/lazy-read-csv "E:/data/puruifull.csv")
+#_(def set6 (->> (fromCSV/lazy-read-csv "D:/data/puruifull.csv")
      map-csv
      (map (partial url-hash :url))
      (sort-by :url-hash)
      ))
 
-set6
+;set6
 
 ;write into csv
 #_(->> (inner-join-1 set5 set6 :url-hash)
@@ -372,7 +375,7 @@ set6
      (remove #(= (:nature %) "其他"))
      (remove #(= (:nature %) "数量词"))
      (sort-by (juxt :brand :nature :counts))
-     (toCSV/toCSV2 [:brand :word :nature :counts] address-1)
+     ;(toCSV/toCSV2 [:brand :word :nature :counts] address-1)
      )
 
 ;write into db 52
@@ -397,7 +400,7 @@ set6
      ;(toCSV/toCSV2 [:brand :word :nature :counts] address-1)
      )
 
-(->> (jdbc/query db-spec2 [query-13])
+#_(->> (jdbc/query db-spec2 [query-13])
      (juxt :title :origin :topic :brand :pubtime :count)
      (map #(extract-date "pubtime" %))
      frequencies
@@ -406,7 +409,16 @@ set6
      )
 
 
-(jdbc/query db-spec2 [query-13])
+
+
+
+(pt/pivot-table [:score :time] [:vote :id] [pt/sum pt/list-it] (jdbc/query db-spec1 [query-14]))
+
+
+
+
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
