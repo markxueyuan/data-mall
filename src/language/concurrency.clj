@@ -71,3 +71,14 @@
 
 @history
 
+(def sara (atom {:name "sara" :age 25} :validator :age))
+
+
+(swap! sara #(update-in % [:age] inc))
+
+(defn y [x] {:a x})
+(y 3)
+
+
+@sara
+
