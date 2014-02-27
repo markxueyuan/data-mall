@@ -82,3 +82,18 @@
 
 @sara
 
+(def xx (ref 0))
+
+(time (wait-futures 5
+                    (dotimes [_ 1000]
+                      (dosync (alter xx + (apply + (range 1000)))))
+                    (dotimes [_ 1000]
+                      (dosync (alter xx - (apply + (range 1000)))))))
+
+(time (wait-futures 5
+                    (dotimes [_ 1000]
+                      (dosync (commute xx + (apply + (range 1000)))))
+                    (dotimes [_ 1000]
+                      (dosync (commute xx - (apply + (range 1000)))))))
+
+
