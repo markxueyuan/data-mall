@@ -52,6 +52,12 @@
 
 
 
+(def raw-json (slurp "E:/mongodb2_4/Bookstore.json"))
 
+(def distilled-json (apply str (string/split raw-json #"\n")))
+
+distilled-json
+
+((file-to "E:/mongodb2_4/Bookstore2.json") distilled-json)
 
 
