@@ -1,19 +1,25 @@
-(ns Miscellaneous.doubanComment)
+(ns Miscellaneous.doubanComment
+  (:refer-clojure :exclude [sort find])
+  (:require [clojure.string :as string]
+            [net.cgrand.enlive-html :as html]
+            [incanter.core :as incanter]
+            [data-mall.connectDB3 :as db]
+            [clojure.java.jdbc :as jdbc]
+            [Miscellaneous.dfl-list :as dfl]
+            [monger.core :as mg];the following 4 is for mongo use
+            [monger.collection :as mc]
+            [monger.operators :refer :all]
+            [monger.query :refer :all])
+  (:import [java.net URL]
+           [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
+           org.bson.types.ObjectId))
 
-(require '(clojure [string :as string]))
-(require '(net.cgrand [enlive-html :as html]))
-(require '(incanter [core :as incanter]))
-(import [java.net URL])
-(require '(data-mall [connectDB3 :as db]))
-(require '[clojure.java.jdbc :as jdbc])
-(require '(Miscellaneous [dfl-list :as dfl]))
 
 (defn dry
   [input]
   (if (= input nil)
     input
-    (apply string/trim input))
-  )
+    (apply string/trim input)));removes whitespaces from both sides of string
 
 (defn trimer
   [input]
@@ -71,14 +77,14 @@
 
 
 
-(def xy (load-data "http://movie.douban.com/subject/10833923/comments?start=51&limit=20&sort=time"))
+;(def xy (load-data "http://movie.douban.com/subject/10833923/comments?start=51&limit=20&sort=time"))
 
-(incanter/view xy)
-
-
+;(incanter/view xy)
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;write data into database;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;write data into mysql;;;;;;;;;;;;;;;
 
 (def db-spec
   (db/mysql-connector "doubancomment"))
@@ -96,24 +102,39 @@
               "PRIMARY KEY (id), "
               "UNIQUE INDEX id_UNIQUE (id ASC)"))
 
-(defonce table (db/create-new-table db-spec "dflnew" ddl))
+#_(defonce table (db/create-new-table db-spec "dflnew" ddl))
 
-(doseq [entry dfl/url-list]
+#_(doseq [entry dfl/url-list]
   (->> entry
        load-data
        (db/write-into-table db-spec "dflnew"))
-       (Thread/sleep 5000)
-       )
+       (Thread/sleep 5000))
 
-(defonce table52 (db/create-new-table db-52 "dfl" ddl))
+#_(defonce table52 (db/create-new-table db-52 "dfl" ddl))
 
 
-(doseq [entry dfl/url-list]
+#_(doseq [entry dfl/url-list]
   (->> entry
        load-data
        (db/write-into-table db-52 "dfl")
        ))
 
+;;;;;;;;;;;;;;;;;;;write into mongo;;;;;;;;;;;;;;;;;;;;;
+
+#_(mg/connect!)
+
+#_(mg/set-db! (mg/get-db "crawler"))
+
+
+#_(let [html (html/html-resource (URL. "http://movie.douban.com/subject/10833923/comments?start=51&limit=20&sort=time"))
+      items (html/select html [:div.comment-item])]
+  (->> (map merge-fields items)
+       vec
+       (mc/insert-batch "douban")))
+
+#_(map #(dissoc % :_id)(with-collection "douban"
+  (find {})
+  (fields [:vote :text :time :score :name :address])))
 
 
 
@@ -125,62 +146,9 @@
 
 ;;;;;;;;;;;;not that smart;;;;;;;;;;;;;;;;
 
-(def aa (html/html-resource (URL. "http://movie.douban.com/subject/10833923/comments?start=1&limit=20&sort=new_score")))
-
-aa
-
-(def bb
-(html/select aa [:div.comment-item :span.comment-info :a]))
-
-bb
-
-(first bb)
-
-
-(html/select aa [:div.comment-item])
-(def hh (html/select aa [:div.comment-item]))
-
-(vec hh)
-
-(def dd (first (html/select aa [:div.comment-item])))
-
-(html/select dd [:span.comment-info :a])
-
-(def cc (first (html/select aa [:div.comment-item])))
-
-(commentor dd)
-
-(html/select dd [:span.comment-info :span])
-
-(def ee (html/select dd [:span.comment-info :span]))
-
-(second ee)
-
-(string/trim (first (:time (rating&time dd))))
-
-(rating&time dd)
-
-(html/select dd [:div.comment :p])
-
-(def ff (html/select dd [:div.comment :p]))
-
-(first (apply :content ff))
 
 
 
 
-(text dd)
 
 
-(html/select dd [:div.comment :span.comment-vote :span])
-
-(merge-rows dd)
-
-
-(->> (html/select dd [:div.comment :p])
-               (apply :content))
-
-
-
-
-
