@@ -23,11 +23,12 @@
 
 (def url-list
   (->> (take 485 (iterate #(+ 20 %) 113))
-       vec
+       ;vec
        (map #(str "http://movie.douban.com/subject/10833923/comments?start=" % "&limit=20&sort=new_score"))))
 
 url-list
 
+;;;;;;;;;;;;;;;;;;;;;;tips
 
 ;how to build an arithmetic sequence?
 
@@ -38,4 +39,5 @@ url-list
 
 
 
-
+
+

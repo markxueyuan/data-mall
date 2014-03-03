@@ -23,6 +23,7 @@
                  [protoflex/parse-ez "0.4.2"]
                  [valip "0.2.0"]
                  ;[simhash "0.1.0-SNAPSHOT"]
+                 [com.novemberain/monger "1.7.0"]
                  ]
 
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
