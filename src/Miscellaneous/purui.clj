@@ -352,13 +352,13 @@
 
 ;set5
 
-#_(def set6 (->> (fromCSV/lazy-read-csv "D:/data/puruifull.csv")
+(def set6 (->> (fromCSV/lazy-read-csv "E:/data/puruifull.csv")
      map-csv
      (map (partial url-hash :url))
      (sort-by :url-hash)
      ))
 
-;set6
+set6
 
 ;write into csv
 #_(->> (inner-join-1 set5 set6 :url-hash)
@@ -412,7 +412,7 @@
 
 
 
-(pt/pivot-table [:score :time] [:vote :id] [pt/sum pt/list-it] (jdbc/query db-spec1 [query-14]))
+#_(pt/pivot-table [:score :time] [:vote :id] [pt/sum pt/list-it] (jdbc/query db-spec1 [query-14]))
 
 
 

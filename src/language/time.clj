@@ -1,6 +1,7 @@
 (ns language.time
   (:require [clj-time.core :as t]
-            [clj-time.format :as f]))
+            [clj-time.format :as f]
+            [clj-time.coerce :as joda]))
 
 (t/date-time 1986 4 2 13 22 4 789)
 
@@ -33,6 +34,9 @@
 
 (f/show-formatters)
 
+(joda/from-long 1393372800000)
+
+(joda/to-long "2014-1-1")
 
 
 

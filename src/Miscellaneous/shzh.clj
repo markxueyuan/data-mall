@@ -24,7 +24,7 @@
     input
     (string/trim input)))
 
-(let [html (html/html-resource (URL. "http://www.sse.com.cn/market/sseindex/indexlist/s/i000001/const_list.shtml"))
+#_(let [html (html/html-resource (URL. "http://www.sse.com.cn/market/sseindex/indexlist/s/i000001/const_list.shtml"))
       items (html/select html [:div.block_l1 :table.tablestyle :tr :td :a])
       urls (->> items
                 (map #(get % :attrs))
@@ -38,8 +38,10 @@
                 (map #(re-seq #"\d+" (second %)))
                 (map first)
                 (map #(Integer. %)))
-      input (map #(zipmap [:corporation :number :url] [%1 %2 %3])  corp num urls)]
+      input (map #(zipmap [:stock-name :number :url] [%1 %2 %3])  corp num urls)]
   (mc/insert-batch "shangzheng" input))
-(Integer/parseInt "123")
 
-(string/trim "\n      a\nb\t          ")
+
+#_(let [html (html/html-resource (URL. "http://www.sse.com.cn/assortment/stock/list/stockdetails/company/index.shtml?COMPANY_CODE=600064&PRODUCTID=600064"))
+      items (html/select html [:div.block_l1])]
+  (mc/insert-batch "shangzheng_corp"items))
