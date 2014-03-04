@@ -7,9 +7,14 @@
 
 ;connect to db
 
-#_(mg/connect!)
+(mg/connect!)
 
 #_(mg/set-db! (mg/get-db "Iamsinger"))
+
+(mg/set-db! (mg/get-db "purui"))
+
+(def data (mc/find-maps "fulltime"))
+
 
 ;insert into db
 

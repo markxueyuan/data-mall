@@ -11,5 +11,7 @@
 ;;;;;;;;;;;;;;;;;;
 
 
-(json/read-json (slurp "http://api.worldbank.org/countries/all/indicators/SP.POP.TOTL?format=json"))
+#_(json/read-json (slurp "http://api.worldbank.org/countries/all/indicators/SP.POP.TOTL?format=json"))
+
+(defn chengyu [] (json/read-json (slurp "E:/data/export.json")))
 

@@ -37,8 +37,6 @@
     (for [entry groups]
       (stats pivots ks fns entry))))
 
-
-
 (defn ->num [i]
   (if (integer? i)
     (double i)
@@ -65,3 +63,4 @@
         sums (sum col)]
     (/ sums nums)))
 
+#_(pt/pivot-table [:score :time] [:vote :id] [pt/sum pt/list-it] (jdbc/query db-spec1 [query-14]))
