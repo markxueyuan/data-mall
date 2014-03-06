@@ -39,7 +39,7 @@
 
 
 (defn ->file [address-from address-to]
-  ((file-to address-to) (to-src address-from)))
+  ((file-to address-to) (to-srt address-from)))
 
 (defn ->file2 [address-from]
   (->file address-from (str address-from ".srt")))
@@ -49,15 +49,4 @@
 
 
 #_(->file2 "E:/mongoDB_courses/welcome")
-
-
-
-(def raw-json (slurp "E:/mongodb2_4/Bookstore.json"))
-
-(def distilled-json (apply str (string/split raw-json #"\n")))
-
-distilled-json
-
-((file-to "E:/mongodb2_4/Bookstore2.json") distilled-json)
-
 
