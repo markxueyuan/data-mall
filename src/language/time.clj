@@ -39,5 +39,7 @@
 (joda/to-long "2014-1-1")
 
 
+(t/in-minutes (t/interval (t/date-time 1986 10 2) (t/date-time 1986 10 14)))
+
 
 

@@ -42,7 +42,7 @@ l
 
 ;rounding
 
-(with-precision 300 (/ 22M 3))
+(with-precision 2 (/ 101M 3))
 
 
 ;object identity
