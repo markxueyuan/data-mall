@@ -1,13 +1,11 @@
-(ns Miscellaneous.webcrawler)
+(ns Miscellaneous.webcrawler
+  (:use clojure.java.io
+        [clojure.string :only (lower-case)])
+  (:require [net.cgrand.enlive-html :as enlive])
+  (:import (java.net URL MalformedURLException)
+           java.util.concurrent.LinkedBlockingQueue))
 
 
-(use 'clojure.java.io)
-
-(require '[net.cgrand.enlive-html :as enlive])
-
-(use '[clojure.string :only (lower-case)])
-
-(import '(java.net URL MalformedURLException))
 
 (defn links-from
   [base-url html]
@@ -16,6 +14,8 @@
                    (try
                      (URL. base-url href)
                      (catch MalformedURLException e))))))
+
+
 
 (defn words-from
   [html]
@@ -27,7 +27,11 @@
       (remove (partial re-matches #"\d+"))
       (map lower-case))))
 
-(def url-queue (java.util.concurrent.LinkedBlockingQueue.))
+;(words-from (enlive/html-resource (URL. "http://www.bbc.co.uk")))
+
+
+
+(def url-queue (LinkedBlockingQueue.))
 (def crawled-urls (atom #{}))
 (def word-freqs (atom {}))
 
@@ -43,11 +47,14 @@
     (try
       (if (@crawled-urls url)
         state
+        (do (Thread/sleep 60000)
         {:url url
          :content (slurp url)
-         ::t #'process})
+         ::t #'process}))
       (catch Exception e state)
       (finally (run *agent*)))))
+
+
 
 (defn process
   [{:keys [url content]}]
@@ -61,6 +68,8 @@
                       {}
                       (words-from html))})
     (finally (run *agent*))))
+
+
 
 (defn ^::blocking handle-results
   [{:keys [url links words]}]
@@ -103,6 +112,31 @@
   (swap! word-freqs empty)
   (.add url-queue starting-url)
   (run)
-  (Thread/sleep 60000)
+  (Thread/sleep 300000)
   (pause)
-  [(count @crawled-urls) (count url-queue)])
+  [(count @crawled-urls) (count url-queue)])
+
+;(test-crawler 5 "http://www.baidu.com")
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;
+
+;enlive/html-resource can be used either way
+
+#_(enlive/html-resource (URL. "http://www.sohu.com"))
+#_(enlive/html-resource (java.io.StringReader. (slurp "http://www.sohu.com")))
+
+;URL. is used like this
+
+#_(URL. (URL. "http://www.sohu.com") "/tianya")
+
+;how to use fnil ?
+
+#_(update-in {} ["hello"] (fnil inc 0))
+
+;how to use merge-with ?
+
+(merge-with + {:a 2 :b 3} {:a 3 :c 4})
+
+
