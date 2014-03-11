@@ -7,16 +7,19 @@
             [monger.core :as mg];the following 4 is for mongo use
             [monger.collection :as mc]
             [monger.operators :refer :all]
-            [monger.query :refer :all]
-            [Miscellaneous.purui :as purui])
+            [monger.query :refer :all])
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId))
 
-(mg/connect! {:host "192.168.3.53" :port 7017})
+#_(mg/connect! {:host "192.168.3.53" :port 7017})
 
-(mg/set-db! (mg/get-db "test"))
+(mg/connect!)
 
-(declare extract-text extract-tieba)
+#_(mg/set-db! (mg/get-db "test"))
+
+(mg/set-db! (mg/get-db "star"))
+
+(declare extract-text extract-tieba extract-tianya extract-weibo extract-douban extract-youku)
 
 (defn integrate-text
   [& {:as source}]
@@ -25,13 +28,13 @@
         job (filter s m)]
     (mapcat #(extract-text % (get source %)) job)))
 
-(integrate-text :tianya 3 :douban 2 :tieba "star_baidutieba_contents")
+(mc/insert-batch "xuetest" (integrate-text :tianya "tianya" :douban 2 :tieba "tieba" :gada "haha" :weibo "weibo"))
 
 (defn extract-text
   [source-key source-address]
-  (cond (= source-key :tianya) (println "This is tianya")
+  (cond (= source-key :tianya) (extract-tianya source-address)
         (= source-key :tieba) (extract-tieba source-address)
-        (= source-key :weibo) (println "This is weibo")
+        (= source-key :weibo) (extract-weibo source-address)
         (= source-key :douban) (println "This is douban")
         (= source-key :youku) (println "This is youku")))
 
@@ -52,22 +55,48 @@
          (map j)
          flatten
          (remove #(= "" (:text %)))
-         (map #(assoc % :source "tianya"))
+         (map #(assoc % :source "tieba"))
          )))
 
-(mc/insert-batch "xuetest" (extract-tieba "star_baidutieba_contents"))
+(defn extract-tianya
+  [source-address]
+  (let [m (mc/find-maps source-address)
+        f #(select-keys % [:_id :content])
+        g #(assoc {} :mid (:_id %) :text (:content %) :level (Integer. 0) :source "tianya")]
+    (->> m
+         (map f)
+         (map g)
+         )))
 
-(extract-tieba "star_baidutieba_contents")
+(defn extract-weibo
+  [source-address]
+  (let [m (mc/find-maps source-address)
+        f #(select-keys % [:_id :text])
+        g #(assoc {} :mid (:_id %) :text (:text %) :level (Integer. 0) :source "weibo")]
+    (->> m
+         (map f)
+         (map g))))
 
-((comp :text :minireps) {:minireps {:text '3}})
+;(extract-weibo "weibo")
 
 
-(mc/find-maps "star_baidutieba_contents")
+
+
+
+
+(mc/insert-batch "xuetest" (extract-tieba "tieba"))
+
+;(extract-tieba "star_baidutieba_contents")
+
+
+
+
+
 
 #_(with-collection "star_baidunews_history"
   find{})
 
-
+;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
 (flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
 
