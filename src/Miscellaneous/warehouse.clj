@@ -16,7 +16,7 @@
 
 (mg/set-db! (mg/get-db "test"))
 
-(declare extract-text)
+(declare extract-text extract-tieba)
 
 (defn integrate-text
   [& {:as source}]
@@ -30,19 +30,36 @@
 (defn extract-text
   [source-key source-address]
   (cond (= source-key :tianya) (println "This is tianya")
-        (= source-key :tieba) (mc/find-maps source-address)
+        (= source-key :tieba) (extract-tieba source-address)
         (= source-key :weibo) (println "This is weibo")
         (= source-key :douban) (println "This is douban")
         (= source-key :youku) (println "This is youku")))
 
-(defn extract-tianya
+(defn extract-tieba
   [source-address]
-  (let [m (mc/find-maps source-address)])
-  (select-keys)
-  )
+  (let [m (mc/find-maps source-address)
+        f #(map :text (:minireps %))
+        g (fn [i] (update-in i [:minireps] (partial apply str)))
+        h (fn [i] [(select-keys i [:_id :minireps])
+                   (select-keys i [:_id :text])])
+        j (fn [i] [(assoc {} :mid (:_id (first i)) :text (:minireps (first i)) :level (Integer. 1))
+                   (assoc {} :mid (:_id (second i)) :text (:text (second i)) :level (Integer. 0))])]
+    (->> m
+         (map #(select-keys % [:_id :text :minireps]))
+         (map #(assoc % :minireps (f %)))
+         (map g)
+         (map h)
+         (map j)
+         flatten
+         (remove #(= "" (:text %)))
+         (map #(assoc % :source "tianya"))
+         )))
 
+(mc/insert-batch "xuetest" (extract-tieba "star_baidutieba_contents"))
 
+(extract-tieba "star_baidutieba_contents")
 
+((comp :text :minireps) {:minireps {:text '3}})
 
 
 (mc/find-maps "star_baidutieba_contents")
@@ -52,6 +69,6 @@
 
 
 
-
+(flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
 
 
