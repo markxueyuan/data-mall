@@ -11,15 +11,20 @@
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId))
 
-#_(mg/connect! {:host "192.168.3.53" :port 7017})
+(mg/connect! {:host "192.168.3.53" :port 7017})
 
-(mg/connect!)
+#_(mg/connect!)
 
-#_(mg/set-db! (mg/get-db "test"))
+(mg/set-db! (mg/get-db "test"))
 
-(mg/set-db! (mg/get-db "star"))
+#_(mg/set-db! (mg/get-db "star"))
 
 (declare extract-text extract-tieba extract-tianya extract-weibo extract-douban extract-youku)
+
+(defn insert-by-part
+  [collection data]
+  (let [parts (partition-all 500 data)]
+    (map #(mc/insert-batch collection %) parts)))
 
 (defn integrate-text
   [& {:as source}]
@@ -28,15 +33,21 @@
         job (filter s m)]
     (mapcat #(extract-text % (get source %)) job)))
 
-(mc/insert-batch "xuetest" (integrate-text :tianya "tianya" :douban 2 :tieba "tieba" :gada "haha" :weibo "weibo"))
+(insert-by-part "xuetest" (integrate-text :tianya "star_tianya_content"
+                                          :douban "star_douban_shortcomments"
+                                          :tieba "star_baidutieba_contents"
+                                          :gada "haha"
+                                          :weibo "star_weibo_history"
+                                          :youku "star_youku_video"))
+
 
 (defn extract-text
   [source-key source-address]
   (cond (= source-key :tianya) (extract-tianya source-address)
         (= source-key :tieba) (extract-tieba source-address)
         (= source-key :weibo) (extract-weibo source-address)
-        (= source-key :douban) (println "This is douban")
-        (= source-key :youku) (println "This is youku")))
+        (= source-key :douban) (extract-douban source-address)
+        (= source-key :youku) (extract-youku source-address)))
 
 (defn extract-tieba
   [source-address]
@@ -77,19 +88,21 @@
          (map f)
          (map g))))
 
-;(extract-weibo "weibo")
+(defn extract-douban
+  [source-address]
+  (let [m (mc/find-maps source-address)
+        f #(select-keys % [:_id :comment])
+        g #(assoc {} :mid (:_id %) :text (:comment %) :level (Integer. 0) :source "douban")]
+    (->> m
+         (map f)
+         (map g))))
 
-
-
-
-
-
-(mc/insert-batch "xuetest" (extract-tieba "tieba"))
-
-;(extract-tieba "star_baidutieba_contents")
-
-
-
+(defn extract-youku
+  [source-address]
+  (let [m (mc/find-maps source-address)
+        f #(select-keys % [:_id :text])]
+    (map #(assoc % :level (Integer. 0) :source "youku") (map f m))
+  ))
 
 
 
@@ -99,5 +112,4 @@
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
 (flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
-
 
