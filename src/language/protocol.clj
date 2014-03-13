@@ -1,6 +1,6 @@
 (ns language.protocol)
 
-
+;extend protocols to existing types
 (defprotocol Matrix
   "Protocol for working with 2d data structures"
   (lookup [matrix i j])
@@ -22,7 +22,6 @@
         (apply map vector vov))
   (dims [vov]
         [(count vov) (count (first vov))])
-
   nil
   (lookup [x i j])
   (update [x i j val])
@@ -30,15 +29,11 @@
   (cols [x] [])
   (dims [x] [0 0])
 
-  (Class/forName "[[D")
+  #_((Class/forName "[[D")
   (lookup [arr i j]
           (aget arr i j))
   (update [arr i j val]
-          (let [clone (aclone arr)]
-            (aset clone i
-                  (doto (aclone (aget clone i))
-                    (aset j val)))
-            clone))
+          (aset arr i j val))
   (rows [arr]
         (map vec arr))
   (cols [arr]
@@ -48,6 +43,8 @@
           (if (zero? rs)
             [0 0]
             [rs (count (aget arr 0))]))))
+
+)
 
 
 (defn vov [h v]
@@ -63,6 +60,17 @@
 ;(cols (update vov-a 2 4 3))
 
 
+;define types
+
+(defrecord NamedPoint [^String name ^long x ^long y])
+
+(NamedPoint/getBasis)
+
+(map meta (NamedPoint/getBasis))
+
+(->NamedPoint "haha" 3 4)
+
+(map->NamedPoint {:name "haha" :x 2 :y 4})
 
 
 
@@ -72,6 +80,16 @@
 (vector 1 2 3)
 (vec "123")
 (apply map vector [[1 2 3] [4 5 6] [7 8]])
+
+;add a pre to your function
+
+(defn try-pre
+  [x]
+  {:pre [(pos? x)]}
+  (+ x 2))
+
+;(try-pre -2)
+(try-pre 2)
 
 
 
