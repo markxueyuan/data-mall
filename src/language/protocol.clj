@@ -48,7 +48,7 @@
 
 
 (defn vov [h v]
-  "create a vector of h v-item vectors"
+  "create a vector of h v-item vectors";factory function
   (vec (repeat h (vec (repeat v nil)))))
 
 ;(update [[1 2 3] [4 5 9] [6 7 8]] 2 1 100)
@@ -60,7 +60,7 @@
 ;(cols (update vov-a 2 4 3))
 
 
-;define types
+;define records
 
 (defrecord NamedPoint [^String name ^long x ^long y])
 
@@ -71,6 +71,46 @@
 (->NamedPoint "haha" 3 4)
 
 (map->NamedPoint {:name "haha" :x 2 :y 4})
+
+;define types
+
+(deftype Point [x y])
+
+(def bb (Point. 3 4))
+
+(.x bb)
+
+(.y bb)
+
+;
+
+(deftype MyType [^:volatile-mutable fld])
+
+;schrödinger's cat
+
+(deftype SchrödingerCat [^:unsynchronized-mutable state]
+  clojure.lang.IDeref
+  (deref [sc]
+         (locking sc
+           (or state
+               (set! state (if (zero? (rand-int 2))
+                             :dead
+                             :alive))))))
+
+(defn schrödinger-cat
+  []
+  (SchrödingerCat. nil))
+
+(def daguguguji (schrödinger-cat))
+
+@daguguguji
+
+
+
+
+
+
+
 
 
 
@@ -88,8 +128,19 @@
   {:pre [(pos? x)]}
   (+ x 2))
 
-;(try-pre -2)
+#_(try-pre -2)
 (try-pre 2)
+
+;the following shows how a lock works
+
+(def o (Object.))
+
+(future (locking o
+          (Thread/sleep 10000)
+          (println "done!")))
+
+(future (locking o
+          (println "done!")))
 
 
 
