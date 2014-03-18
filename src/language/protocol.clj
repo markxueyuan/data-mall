@@ -106,7 +106,48 @@
 @daguguguji
 
 
+;implement protocols
 
+(defrecord Point [x y]
+  Matrix
+  (lookup [pt i j]
+          (when (zero? j)
+            (case i
+              0 x
+              1 y)))
+  (update [pt i j val]
+          (if (zero? j)
+            (condp = i
+              0 (Point. val y)
+              1 (Point. x val))
+            pt))
+  (rows [pt] [[x] [y]])
+  (cols [pt] [x y])
+  (dims [pt] [2 1]))
+
+(lookup (Point. 3 4) 0 0)
+(update (Point. 3 4) 1 0 7)
+
+(defrecord Point [x y])
+
+(extend-protocol Matrix
+  Point
+  (lookup [pt i j]
+          (when (zero? j)
+            (case i
+              0 (.x pt)
+              1 (.y pt))))
+  (update [pt i j val]
+          (if (zero? j)
+            (condp i
+              0 (Point. val (.y pt))
+              1 (Point. (.x pt) val))
+            pt))
+  (rows [pt] [[(.x pt)] [(.y pt)]])
+  (cols [pt] [(.x pt) (.y pt)])
+  (dims [pt] [2 1]))
+
+(lookup (Point. 3 4) 1 0)
 
 
 
@@ -141,6 +182,24 @@
 
 (future (locking o
           (println "done!")))
+
+;some
+
+(some #{1 2 3} [3 4 5])
+
+(some #{1 2 3} [4 5 6])
+
+(some even? [4 5 6])
+
+(some even? [5 7 9])
+
+;condp
+
+(condp some [2 3 4]
+  ;#{0 1 2} "low!"
+  ;#{2 3 4} :>> #(str "higher than " %)
+  #{3 4 5} :>> #(str "find this -> " %)
+  #{4 5 6} "high!")
 
 
 
