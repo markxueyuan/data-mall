@@ -7,9 +7,13 @@
             [monger.core :as mg];the following 4 is for mongo use
             [monger.collection :as mc]
             [monger.operators :refer :all]
-            [monger.query :refer :all])
+            [monger.query :refer :all]
+            [data-mall.ansj-seg :as seg])
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;extract text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (mg/connect! {:host "192.168.3.53" :port 7017})
 
@@ -108,6 +112,26 @@
 
 #_(with-collection "star_baidunews_history"
   find{})
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;word-count;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn unwind
+  [entry]
+  (let [pivot (dissoc entry :wordseg) ])
+
+(defn word-count
+  [collections target-key & kws]
+  (->> collections
+       (map #(seg/word-seg target-key %))
+       (map #(select-keys % (conj kws :word-seg)))
+       ))
+
+(word-count (mc/find-maps "xuetest") :text :source)
+
+(->> (mc/find-maps "xuetest")
+     (map #(seg/word-seg :text %))
+     (insert-by-part "wordseg"))
 
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
