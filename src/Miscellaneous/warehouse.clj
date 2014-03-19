@@ -8,7 +8,9 @@
             [monger.collection :as mc]
             [monger.operators :refer :all]
             [monger.query :refer :all]
-            [data-mall.ansj-seg :as seg])
+            [data-mall.ansj-seg :as seg]
+            [data-mall.synonym :as syn]
+            [data-mall.pivot-table :as pt])
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId))
 
@@ -37,7 +39,7 @@
         job (filter s m)]
     (mapcat #(extract-text % (get source %)) job)))
 
-(insert-by-part "xuetest" (integrate-text :tianya "star_tianya_content"
+#_(insert-by-part "xuetest" (integrate-text :tianya "star_tianya_content"
                                           :douban "star_douban_shortcomments"
                                           :tieba "star_baidutieba_contents"
                                           :gada "haha"
@@ -113,23 +115,41 @@
 #_(with-collection "star_baidunews_history"
   find{})
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;date counting;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;word-count;;;;;;;;;;;;;;;;;;;;;;;
+(defn extract-date
+  [{:keys [source mid] :as entry}]
+  (case source
+    :tieba ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;word-seg;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn unwind
   [entry]
-  (let [pivot (dissoc entry :wordseg) ])
+  (let [pivot (dissoc entry :word-seg)
+        word-seg (get entry :word-seg)
+        func #(into pivot %)]
+    (map func word-seg)))
 
-(defn word-count
+;(unwind {:a 1 :b 2 :word-seg [{:word 4 :nature 5} {:word 6 :nature 7}]})
+
+(defn word-seg
   [collections target-key & kws]
   (->> collections
+       ;(take 5)
        (map #(seg/word-seg target-key %))
        (map #(select-keys % (conj kws :word-seg)))
+       (map unwind)
+       (apply concat)
+       (filter #(> (count (:word %)) 1))
+       (map #(syn/han :nature %))
+       ;frequencies
+       ;(map #(assoc (first %) :counts (second %)))
        ))
 
-(word-count (mc/find-maps "xuetest") :text :source)
+(insert-by-part "word_count"(word-seg (mc/find-maps "xuetest") :text :source :mid))
 
-(->> (mc/find-maps "xuetest")
+#_(->> (mc/find-maps "xuetest")
      (map #(seg/word-seg :text %))
      (insert-by-part "wordseg"))
 
