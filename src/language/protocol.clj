@@ -149,11 +149,116 @@
 
 (lookup (Point. 3 4) 1 0)
 
+;inline implementation
+
+(defprotocol ClashWhenInlined
+  (size [x]))
+
+#_(defrecord R []
+  ClashWhenInlined
+  (size [x]))
+
+
+(deftype R []
+  ClashWhenInlined
+  (size [x]))
+
+(defrecord R [])
+
+(extend-type R
+  ClashWhenInlined
+  (size [x]))
+
+(.size (R.));this result is exceptional!
+
+;inline implementation is not encouraged! But it is the only way to implement java interfaces!
+
+
+;extend Object by inline implementation(this is a special case, inline implementation does not support other classes)
+
+(deftype Point [x y]
+  Matrix
+  (lookup [pt i j]
+          (when (zero? j)
+            (case i
+              0 x
+              1 y)))
+  (update [pt i j val]
+          (if (zero? j)
+            (condp = i
+              0 (Point. val y)
+              1 (Point. x val))
+            pt))
+  (rows [pt] [[x] [y]])
+  (cols [pt] [x y])
+  (dims [pt] [2 1])
+  Object
+  (equals [this other]
+          (and (instance? (class this) other)
+               (= x (.x other))
+               (= y (.y other))))
+  (hashCode [this]
+            (-> x
+                hash
+                (hash-combine y))))
+
+(Point. 3 4)
+
+;(.hashCode (Point. 3 4))
+;(.hashCode (Point. 4 3))
+
+;(.equals (Point. 3 4) (Point. 3 4))
+
+
+;reify
+(count (.listFiles (java.io.File. ".")
+            (reify
+              java.io.FileFilter
+              (accept [this f]
+                      (.isDirectory f)))))
+
+(aget (.listFiles (java.io.File. ".")) 0)
+
+(count (.listFiles (java.io.File. ".")))
 
 
 
+(defrecord Banana [qty])
+(defrecord Grape  [qty])
+(defrecord Orange [qty])
 
+;;; 'subtotal' differs from each fruit.
 
+(defprotocol Fruit
+  (subtotal [item]))
+
+(extend-type Banana
+  Fruit
+  (subtotal [item]
+            (* 158 (:qty item))))
+
+(extend-type Grape
+  Fruit
+  (subtotal [item]
+            (* 178 (:qty item))))
+
+(extend-type Orange
+  Fruit
+  (subtotal [item]
+            (* 98 (:qty item))))
+
+;;; 'coupon' is the function returing a 'reify' of subtotal. This is
+;;; when someone uses a coupon ticket, the price of some fruits is
+;;; taken off 25%.
+
+(defn coupon [item]
+  (reify Fruit
+    (subtotal [_]
+              (int (* 0.75 (subtotal item))))))
+
+;;; Example: To compute the total when someone bought 10 oranges,
+;;;  15 bananas and 10 grapes using a coupon.
+(apply +  (map subtotal [(Orange. 10) (Banana. 15) (coupon (Grape. 10))]))
 
 
 ;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;
@@ -201,5 +306,17 @@
   #{3 4 5} :>> #(str "find this -> " %)
   #{4 5 6} "high!")
 
+;size is defined as a method for maps
 
+(.size {:a 2 :b 3 :c 4 :d 4})
+
+;instance?
+(instance? (class 3) 2)
+
+(class 3)
+
+(instance? (class (Integer. 3)) 3)
+
+(hash 'x)
+(hash-combine (hash 'x) 'y)
 
