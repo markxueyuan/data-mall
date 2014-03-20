@@ -261,6 +261,117 @@
 (apply +  (map subtotal [(Orange. 10) (Banana. 15) (coupon (Grape. 10))]))
 
 
+;reusing implementations
+
+(defrecord Point [x y])
+
+(extend Point
+  Matrix
+  {:lookup (fn [pt i j]
+             (when (zero? j)
+               (case i
+                 0 (:x pt)
+                 1 (:y pt))))
+   :update (fn [pt i j val]
+             (if (zero? j)
+               (case i
+                 0 (Point. val (:y pt))
+                 1 (Point. (:x pt) val))
+               pt))
+   :rows (fn [pt]
+           [[:x pt] [:y pt]])
+   :cols (fn [pt]
+           [(:x pt) (:y pt)])
+   :dims (fn [pt]
+           [2 1])})
+
+;(lookup (Point. 3 4) 1 0)
+
+;like heritage from discrete class implementation
+
+(def abstract-matrix-impl
+  "happily fixed the problems in book clojure programming"
+  {:rows (fn [matrix]
+           (let [[h v] (dims matrix)]
+             (map (fn [x] (map #(lookup matrix x %) (range 0 v))) (range 0 h))))
+   :cols (fn [matrix]
+           (apply map vector (rows matrix)))})
+
+(extend Point
+  Matrix
+  (assoc abstract-matrix-impl
+    :lookup (fn [pt i j]
+             (when (zero? j)
+               (case i
+                 0 (:x pt)
+                 1 (:y pt))))
+    :update (fn [pt i j val]
+             (if (zero? j)
+               (case i
+                 0 (Point. val (:y pt))
+                 1 (Point. (:x pt) val))
+               pt))
+    :dims (fn [pt]
+           [2 1])))
+
+(rows (Point. 3 4))
+
+(cols (Point. 3 4))
+
+;mixins
+
+(defprotocol Measurable
+  "A protocol for retrieving the dimensions of widget"
+  (width [measurable] "Returns the width in px")
+  (height [measurable] "Returns the height in px"))
+
+(defrecord Button [text])
+
+(:text (Button. "hahaha"))
+
+(extend-type Button
+  Measurable
+  (width [button]
+         (* 8 (count (:text button))))
+  (height [button]
+          8))
+
+(width (Button. "This is not kidding!"))
+(height (Button. "This is not kidding!"))
+
+(def bordered
+  {:width #(* 2 (:border-width %))
+   :height #(* 2 (:border-height %))})
+
+Measurable
+(get-in Measurable [:impls Button])
+
+(defn combine
+  [op f g]
+  (fn [& args]
+    (op (apply f args) (apply g args))))
+
+(defrecord BorderedButton [text border-width border-height])
+
+(extend BorderedButton
+  Measurable
+  (merge-with (partial combine +)
+              (get-in Measurable [:impls Button])
+              bordered))
+
+(width (Button. "What a mother fucker you are!"))
+(height (Button. "What a mother fucker you are!"))
+
+(width (BorderedButton. "What a mother fucker you are!" 9 1))
+(height (BorderedButton. "What a mother fucker you are!" 9 1))
+
+
+
+
+
+
+
+
 ;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;
 
 (vector 1 2 3)
@@ -320,3 +431,5 @@
 (hash 'x)
 (hash-combine (hash 'x) 'y)
 
+;range forever returns a seq
+(range 0 1)
