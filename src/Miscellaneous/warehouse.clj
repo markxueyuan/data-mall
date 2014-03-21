@@ -147,7 +147,7 @@
        ;(map #(assoc (first %) :counts (second %)))
        ))
 
-(insert-by-part "word_count"(word-seg (mc/find-maps "xuetest") :text :source :mid))
+;(insert-by-part "word_count"(word-seg (mc/find-maps "xuetest") :text :source :mid))
 
 #_(->> (mc/find-maps "xuetest")
      (map #(seg/word-seg :text %))
