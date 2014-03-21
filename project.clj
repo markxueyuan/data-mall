@@ -24,6 +24,7 @@
                  [valip "0.2.0"]
                  ;[simhash "0.1.0-SNAPSHOT"]
                  [com.novemberain/monger "1.7.0"]
+                 [clj-excel "0.0.1"]
                  ]
 
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
