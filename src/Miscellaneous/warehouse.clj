@@ -131,7 +131,7 @@
         func #(into pivot %)]
     (map func word-seg)))
 
-;(unwind {:a 1 :b 2 :word-seg [{:word 4 :nature 5} {:word 6 :nature 7}]})
+(unwind {:a 1 :b 2 :word-seg [{:word 4 :nature 5} {:word 6 :nature 7}]})
 
 (defn word-seg
   [collections target-key & kws]
