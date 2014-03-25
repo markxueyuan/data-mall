@@ -365,6 +365,32 @@ Measurable
 (width (BorderedButton. "What a mother fucker you are!" 9 1))
 (height (BorderedButton. "What a mother fucker you are!" 9 1))
 
+;protocol intospection
+
+(extenders Measurable)
+(extends? Measurable Button)
+(satisfies? Measurable (Button. "daguguguji"))
+
+;the following is not allowed.
+#_(instance? Measurable Button)
+
+
+;competitive implementations
+
+(defprotocol mao (a [this]))
+
+(extend-protocol mao
+  java.util.Collection
+  (a [this] :collection)
+  java.util.List
+  (a [this] :list))
+
+(a [])
+
+(a (list 'a 'b))
+
+
+
 
 
 
@@ -433,3 +459,5 @@ Measurable
 
 ;range forever returns a seq
 (range 0 1)
+
+
