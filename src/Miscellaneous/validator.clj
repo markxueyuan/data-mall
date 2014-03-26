@@ -34,7 +34,44 @@
   (try (read-string x)
     (catch Exception e x)))
 
+(defn coerce-row
+  [_ row sink]
+  (let [cast-row (apply assoc row (mapcat (fn [k] [k (try-read-string (k row))]) int-rows))]
+    (send sink conj cast-row)
+    cast-row))
 
+(defn read-row
+  [rows caster sink]
+  (when-let [[item & items] (seq rows)]
+    (send caster coerce-row item sink)
+    (send *agent* read-row caster sink)
+    items))
+
+(defn int-val?
+  [x]
+  (or (int? x) (empty? x)))
+
+(defn validate
+  [row]
+  (or (nil? row)
+      (reduce #(and %1 (int-val? (%2 row)))
+              true  int-rows)))
+
+(defn agent-ints
+  [input-file]
+  (let [reader (agent (seque (with-header
+                               (lazy-read-csv input-file))))
+        caster (agent nil)
+        sink (agent [])]
+    (set-validator! caster validate)
+    (send reader read-row caster sink)
+    {:reader reader
+     :caster caster
+     :sink sink}))
+
+;(agent-ints data-file)
+
+(empty? "")
 
 
 
@@ -57,8 +94,24 @@
 (try (n) (catch Exception e n))
 (try (n) (catch Exception e (println n)))
 
+;you should look at apply in a more flexible way!
+(apply assoc {} (concat [:a 2] [:b 3]))
+(apply (partial assoc {}) (concat [:a 2] [:b 3]))
+
+;seque
+
+;Creates a queued seq on another (presumably lazy) seq s. The queued
+;seq will produce a concrete seq in the background, and can get up to
+;n items ahead of the consumer. n-or-q can be an integer n buffer
+;size, or an instance of java.util.concurrent BlockingQueue. Note
+;that reading from a seque can block if the reader gets ahead of the
+;producer.
 
 
+;what is "" ?
 
+(nil? "")
+(empty? "") ;is the same as:
+(not (seq ""))
 
 
