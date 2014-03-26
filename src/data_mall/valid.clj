@@ -1,6 +1,9 @@
 (ns data-mall.valid
   (:require [valip.core :as v]
-            [valip.predicates :as p]))
+            [valip.predicates :as p]
+            [validateur.validation :refer :all]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;valip;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def user
   {:given-name "Fox"
@@ -37,10 +40,19 @@
 ;(validate-user (assoc user :surname nil))
 ;(validate-user (assoc user :age -23))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;validateur;;;;;;;;;;;;;;;;;;;;;;
+
+(let [v (validation-set
+         (presence-of [:name :last])
+         (presence-of :age))
+      result [(v {:name {:first "Joe" :last "wang"} :age 28}) (v {:name "jimmy" :age 28})]
+      report (map valid? result)]
+  report)
 ;;;;;;;;;;;;;tips;;;;;;;;;;;;;;
 
 (instance? Integer (Integer. 3))
 (instance? Long 3)
+(instance? Integer 3)
 
 ;There are more predicts in valip predict namespace
 
