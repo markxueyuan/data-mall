@@ -1,4 +1,5 @@
 (ns data-mall.mongodb
+  (:refer-clojure :exclude [sort find])
   (:require [monger.core :as mg]
             [monger.collection :as mc]
             [monger.operators :refer :all]
@@ -6,6 +7,8 @@
             [validateur.validation :refer :all]
             ;[clojure.test :refer [is]]
             [monger.multi.collection :as mmc];mirror of mc, but with db as first argument for every function.
+            [monger.conversion :refer [from-db-object]]
+            [monger.query :refer :all :as mq]
             )
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern BasicDBObject BasicDBList]
            org.bson.types.ObjectId
@@ -19,7 +22,7 @@
 
 (mg/set-db! (mg/get-db "test"))
 
-(def data (mc/find-maps "fulltime"))
+#_(def data (mc/find-maps "fulltime"))
 
 
 ;insert into db
@@ -39,15 +42,9 @@
 
 ;insert array
 
-(mc/insert "insertarray" {:name "John" :age 30 :pets ["sam" "chelsie"]})
+#_(mc/insert "insertarray" {:name "John" :age 30 :pets ["sam" "chelsie"]})
 
-;ObjectId
 
-#_(let [oid (ObjectId.)
-      entry {:a 2 :b 3}]
-  (mc/insert-and-return "basics" (merge entry {:_id oid})))
-
-#_(ObjectId. "5312dd1a3df359d5919cc5c6")
 
 ;insert instance of DBObject
 
@@ -108,7 +105,98 @@
 
 #_(mc/find "basics" {:property true})
 #_(mc/find-maps "basics" {:property "官二代"})
-#_(mc/find-maps "stars" {:Location "Beijing"})
+(mc/find-one "insertarray" {:name "John"})
+(mc/find-one-as-map "insertarray" {:name "John"})
+(mc/find-one "insertarray" {:name "John"} ["name" "age"])
+(mc/find-one "insertarray" {:name "John"} {:name 1 :age 1})
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {"d.x" 3} {"d.x" 1 :_id 0})
+
+
+(let [oid (ObjectId.)]
+  (mc/insert "insertarray" {:_id oid :first_name "John" :last_name "Lennon"})
+  (mc/find-map-by-id "insertarray" oid))
+
+;ObjectId
+
+#_(let [oid (ObjectId.)
+      entry {:a 2 :b 3}]
+  (mc/insert-and-return "basics" (merge entry {:_id oid})))
+
+#_(ObjectId. "5312dd1a3df359d5919cc5c6")
+
+(str (ObjectId. "5312dd1a3df359d5919cc5c6"))
+
+;conversion
+
+(from-db-object (mc/find "insertarray" {:name "John"}) true)
+
+
+;query operators
+
+$gt
+$gte
+$lt
+$lte
+;$ is macro expanded during compiling
+;these operators work on dates, can be java.util.Date or Joda Time(clj-time)
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:x {"$gt" 2 "$lte" 10}})
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:x {$gt 2 $lte 10}})
+
+$exists
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {"d.x" {$exists false}})
+
+$mod
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:x {$mod [3 2]}})
+
+$ne
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:x {$ne 5}})
+(mmc/co  unt (mg/get-db "temperature") "temperature" {:x {$ne 5}})
+
+$all
+$in
+$nin
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:j {$all [1 2 3 ]}} {:j 1 :_id 0})
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:z {$in [5 6 7]}} {:z 1 :_id 0})
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:x {$nin [1 2 3 4]}} {:x 1 :_id 0})
+
+
+$and
+$or
+$nor
+
+(mmc/find-maps (mg/get-db "temperature") "temperature" {$and [{:x 2} {"d.x" 3}]} {:x 1 :d 1 :_id 0})
+(mmc/find-maps (mg/get-db "temperature") "temperature" {$or [{:x 2} {"d.x" 3}]} {:x 1 :d 1 :_id 0})
+(mmc/find-maps (mg/get-db "temperature") "temperature" {$nor [{:x 2} {"d.x" 3}]} {:x 1 :d 1 :_id 0})
+
+
+$regex
+
+;options ignore upper case or lower case
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:x {$regex "Gra.*" $options "i"}} {:x 1 :_id 0})
+
+$elemMatch
+(mmc/find-maps (mg/get-db "temperature") "temperature" {:d {$elemMatch {:x 444 :y {$lte 11}}}})
+
+;getting distinct documents
+
+(mmc/distinct (mg/get-db "temperature") "temperature" :x)
+
+
+;query dsl
+
+(mg/with-db (mg/get-db "temperature")
+            (with-collection "temperature"
+              (find {})
+              (fields [:x :y])
+              (sort (array-map :x -1 :y 1))))
 
 ;update
 
