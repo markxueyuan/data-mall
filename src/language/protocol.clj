@@ -128,6 +128,7 @@
 (lookup (Point. 3 4) 0 0)
 (update (Point. 3 4) 1 0 7)
 
+
 (defrecord Point [x y])
 
 (extend-protocol Matrix
