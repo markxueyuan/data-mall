@@ -196,7 +196,19 @@ $elemMatch
             (with-collection "temperature"
               (find {})
               (fields [:x :y])
-              (sort (array-map :x -1 :y 1))))
+              (sort (array-map :x -1 :y 1))
+              (skip 20)))
+
+(mg/with-db (mg/get-db "temperature")
+            (with-collection "temperature"
+              (find {})
+              (fields [:x :y])
+              (sort (array-map :x -1 :y 1))
+              (paginate :page 5 :per-page 10)))
+
+
+
+
 
 ;update
 
