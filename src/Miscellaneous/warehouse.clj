@@ -8,6 +8,7 @@
             [monger.collection :as mc]
             [monger.operators :refer :all]
             [monger.query :refer :all]
+            [monger.joda-time :as mjt]
             [data-mall.ansj-seg :as seg]
             [data-mall.synonym :as syn]
             [data-mall.pivot-table :as pt]
@@ -17,7 +18,8 @@
             [clj-time.local :as l]
             )
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
-           org.bson.types.ObjectId))
+           org.bson.types.ObjectId)
+  (:use clj-excel.core))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;extract text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -28,7 +30,7 @@
 
 (defn insert-by-part
   [collection data]
-  (let [parts (partition-all 500 data)]
+  (let [parts (partition-all 5000 data)]
     (map #(mc/insert-batch collection %) parts)))
 
 (defn integrate-text
@@ -199,10 +201,16 @@
 
 (defn associate-date
   [location {:as entry}]
-  (let [fmt (f/formatter "YYYY-MM-dd")]
-    (assoc entry :pubdate (l/format-local-time (extract-date location entry) :date))))
+  (assoc entry :pubdate (l/format-local-time (extract-date location entry) :date)))
 
-#_(associate-date locations {:source "weibo" :mid (ObjectId. "530ec0ad07b83b420009e8b5")})
+(defn associate-joda-date
+  [location {:as entry}]
+  (let [joda (extract-date location entry)
+        string (l/format-local-time (extract-date location entry) :date)
+        date (f/parse (f/formatter (t/default-time-zone) "YYYY-MM-dd" "YYYY/MM/dd") string)]
+    (assoc entry :pubdate date)))
+
+(associate-joda-date locations {:source "weibo" :mid (ObjectId. "530ec0ad07b83b420009e8b5")})
 
 
 
@@ -232,8 +240,88 @@
        (map #(associate-date locations %))
        (#(word-seg % :text :source :mid :pubdate))))
 
-(->> (make-all locations)
+(defn make-all-joda
+  [locations]
+  (->> locations
+       integrate-text
+       (map #(associate-joda-date locations %))
+       (#(word-seg % :text :source :mid :pubdate))
+       ;(take 5)
+       ))
+
+#_(->> (make-all locations)
      (insert-by-part "xuetestall"))
+
+
+(->> (make-all-joda locations)
+     (insert-by-part "xuetestall"))
+
+(mc/find-maps "xuetestall" {})
+
+(defn word-date-distribution
+  ([collection word start-day end-day]
+   (let [result (mc/aggregate collection [{$group {:_id {:pubdate "$pubdate" :word "$word" :nature "$nature"} :counts {$sum 1}}}
+                              {$match {"_id.pubdate" {$gte (t/from-time-zone (apply t/date-time start-day) (t/time-zone-for-offset +8))
+                                                      $lte (t/from-time-zone (apply t/date-time end-day) (t/time-zone-for-offset +8))}
+                                       "_id.word" word}}
+                              {$sort {"_id.pubdate" 1}}
+                              ;{$match {"_id.nature" "形容词"}}
+                              ])
+        fstr #(l/format-local-time % :date)
+        fdate #((comp fstr :pubdate :_id) %)
+        fn #(assoc {} :word word :date (fdate %) :counts (:counts %))]
+    (map fn result)
+    ))
+  ([collection start-day end-day]
+   (let [result (mc/aggregate collection [{$group {:_id {:pubdate "$pubdate" :word "$word" :nature "$nature"} :counts {$sum 1}}}
+                                          {$sort {"_id.pubdate" 1}}
+                                          {$match {"_id.pubdate" {$gte (t/from-time-zone (apply t/date-time start-day) (t/time-zone-for-offset +8))
+                                                                  $lte (t/from-time-zone (apply t/date-time end-day) (t/time-zone-for-offset +8))}}}
+                              ;{$match {"_id.nature" "形容词"}}
+                              ])
+        fstr #(l/format-local-time % :date)
+        fdate #((comp fstr :pubdate :_id) %)
+        fword #((comp :word :_id) %)
+        fn #(assoc {} :word (fword %) :date (fdate %) :counts (:counts %))]
+    (map fn result)
+    )))
+
+
+;(word-date-distribution "xuetestall" [2014 2 1] [2014 3 1])
+
+(def black-list [])
+
+(def white-list [])
+
+(defn word-list
+  [collection nature]
+  (let [result (mc/aggregate collection [{$group {:_id {:word "$word" :nature "$nature"} :counts {$sum 1}}}
+                              {$sort {"counts" -1}}
+                              {$match {"_id.nature" nature}}
+                              ])
+        fword #((comp :word :_id) %)
+        fnature #((comp :nature :_id) %)
+        fn #(assoc {} :word (fword %) :nature (fnature %) :counts (:counts %))
+        ]
+    (map fn result)))
+
+
+(t/from-time-zone (t/date-time 2014 2 1) (t/time-zone-for-offset +8))
+
+(word-list "xuetestall" "人名")
+
+(defn write-excel
+  [collection sheet file]
+  (let [func #(map val %)
+        cols (map key (first collection))]
+    (->> collection
+         (map #(func %))
+         (#(build-workbook (workbook-xssf) {sheet (into (vector cols) %)}))
+         (#(save % file))
+         )))
+
+(write-excel (word-list "xuetestall" "人名") "haha" "D:/data/人名.xlsx")
+
 
 
 
@@ -243,4 +331,4 @@
 
 (f/show-formatters)
 
-(f/formatters :basic-date-time)
+
