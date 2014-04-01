@@ -125,8 +125,10 @@
   (let [synm (speech-synonyms (k entry) (k entry))]
     (assoc entry k synm)))
 
-
-
+(defn category
+  [k entry synonyms]
+  (let [cat (synonyms (k entry) (k entry))]
+    (assoc entry k cat)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

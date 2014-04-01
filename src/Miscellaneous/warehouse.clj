@@ -30,7 +30,7 @@
 
 (defn insert-by-part
   [collection data]
-  (let [parts (partition-all 5000 data)]
+  (let [parts (partition-all 500 data)]
     (map #(mc/insert-batch collection %) parts)))
 
 (defn integrate-text
@@ -48,6 +48,7 @@
                                           ;:youku "star_youku_video"
                                            }))
 
+;(integrate-text locations)
 
 (defn extract-text
   [source-key source-address]
@@ -210,53 +211,56 @@
         date (f/parse (f/formatter (t/default-time-zone) "YYYY-MM-dd" "YYYY/MM/dd") string)]
     (assoc entry :pubdate date)))
 
-(associate-joda-date locations {:source "weibo" :mid (ObjectId. "530ec0ad07b83b420009e8b5")})
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;all entries;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn all-entries
+  [locations]
+  (->> locations
+       integrate-text
+       (map #(associate-date locations %))
+       ))
+
+(defn all-entries-joda
+  [locations]
+  (->> locations
+       integrate-text
+       (map #(associate-joda-date locations %))
+       ))
+
+;(all-entries locations)
 
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(mg/connect! {:host "192.168.3.53" :port 7017})
-
-#_(mg/connect!)
-
-(mg/set-db! (mg/get-db "test"))
-
-#_(mg/set-db! (mg/get-db "star"))
-
-(def locations {:tianya "star_tianya_content"
-             :douban "star_douban_shortcomments"
-             :tieba "star_baidutieba_contents"
-             :gada "haha"
-             :weibo "star_weibo_history"
-             ;:youku "star_youku_video"
-               })
-
+;(insert-by-part "xuetestentries" (all-entries-joda locations))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;word-seg-all;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn make-all
   [locations]
   (->> locations
        integrate-text
        (map #(associate-date locations %))
-       (#(word-seg % :text :source :mid :pubdate))))
+       (#(word-seg % :text :source :mid :pubdate :_id))))
 
 (defn make-all-joda
   [locations]
   (->> locations
        integrate-text
        (map #(associate-joda-date locations %))
-       (#(word-seg % :text :source :mid :pubdate))
+       (#(word-seg % :text :source :mid :pubdate :_id))
        ;(take 5)
        ))
 
-#_(->> (make-all locations)
-     (insert-by-part "xuetestall"))
+;(make-all-joda locations)
 
+(defn word-seg-all
+  [collection]
+  (->> collection
+       (#(word-seg % :text :source :mid :pubdate :_id))
+       (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
 
-(->> (make-all-joda locations)
-     (insert-by-part "xuetestall"))
+;(insert-by-part "xuetestsegs"(word-seg-all (mc/find-maps "xuetestentries")))
 
-(mc/find-maps "xuetestall" {})
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn word-date-distribution
   ([collection word start-day end-day]
@@ -286,13 +290,6 @@
     (map fn result)
     )))
 
-
-;(word-date-distribution "xuetestall" [2014 2 1] [2014 3 1])
-
-(def black-list [])
-
-(def white-list [])
-
 (defn word-list
   [collection nature]
   (let [result (mc/aggregate collection [{$group {:_id {:word "$word" :nature "$nature"} :counts {$sum 1}}}
@@ -305,10 +302,65 @@
         ]
     (map fn result)))
 
+;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
-(t/from-time-zone (t/date-time 2014 2 1) (t/time-zone-for-offset +8))
+;(mc/find-maps "xuetestsegs")
 
-(word-list "xuetestall" "人名")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;drilling down;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn drill-down
+  [word segs entries start-day end-day]
+  (let [text #(:text (mc/find-one-as-map entries {:_id (:mid2 %)} {:_id 0 :text 1}))
+        func #(assoc % :text (text %))
+        date-range {$gte (t/from-time-zone (apply t/date-time start-day) (t/time-zone-for-offset +8))
+                    $lte (t/from-time-zone (apply t/date-time end-day) (t/time-zone-for-offset +8))}
+        col (with-collection "xuetestsegs"
+              (find {:word word :pubdate date-range})
+              (sort (array-map :pubdate 1)))]
+    (->> (map func col)
+         (map #(select-keys % [:source :text :pubdate :word :mid2]))
+         distinct
+         (map #(assoc % :pubdate (l/format-local-time (:pubdate %) :date)))
+         (map #(assoc % :mid2 (str (:mid2 %))))
+         )))
+
+(drill-down "开心" "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1])
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;adding category;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn category
+  [k1 k2 entry synonyms]
+  (let [cat (synonyms (get entry k1) (get entry k1))]
+    (assoc entry k2 cat)))
+
+(defn synonym
+  [excel & sheets]
+  (let [data (lazy-workbook (workbook-xssf excel))
+        first-sym (->> (mapcat val (select-keys data sheets))
+                       (map #(take 2 %))
+                       (reduce #(apply assoc %1 %2) {}))
+        func #(map second (second %))
+        func2 #(map (fn [n] (vector n (first %)))(func %))
+        second-sym (->> (mapcat func2 data)
+                        (reduce #(apply assoc %1 %2) {}))
+        ]
+   [first-sym second-sym (map key first-sym)]
+  ))
+
+(defn add-category
+  [collection excel & sheets]
+  (let [func1 #(category :word :topic % (first (apply synonym excel sheets)))
+        func2 #(category :topic :category % (second (apply synonym excel sheets)))]
+    (->> (map func1 collection)
+         (map func2))))
+
+;(add-category [{:word "x"}{:word "e"}] "D:/data/heihei.xlsx" "haha")
+
+;(first(rest (synonym "D:/data/星星分词.xlsx" "人物" "名词" "形容词")))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;excel output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn write-excel
   [collection sheet file]
@@ -320,15 +372,85 @@
          (#(save % file))
          )))
 
-(write-excel (word-list "xuetestall" "人名") "haha" "D:/data/人名.xlsx")
+;(write-excel (drill-down "都敏俊" "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1]) "haha" "D:/data/教授.xlsx")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(mg/connect! {:host "192.168.3.53" :port 7017})
+
+#_(mg/connect!)
+
+(mg/set-db! (mg/get-db "test"))
+
+#_(mg/set-db! (mg/get-db "star"))
+
+(def locations {:tianya "star_tianya_content"
+             :douban "star_douban_shortcomments"
+             :tieba "star_baidutieba_contents"
+             :gada "haha"
+             :weibo "star_weibo_history"
+             ;:youku "star_youku_video"
+               })
+
+
+;(associate-joda-date locations {:source "weibo" :mid (ObjectId. "530ec0ad07b83b420009e8b5")})
+
+#_(->> (make-all locations)
+     (insert-by-part "xuetestall"))
+
+
+#_(->> (make-all-joda locations)
+     (insert-by-part "xuetestall"))
 
 
 
+
+
+;(word-date-distribution "xuetestall" [2014 2 1] [2014 3 1])
+
+(def black-list [])
+
+(def white-list [])
+
+
+
+
+#_(word-list "xuetestall" "人名")
+
+
+
+#_(write-excel (word-list "xuetestall" "人名") "haha" "D:/data/人名.xlsx")
+
+#_(write-excel (add-category (mapcat #(drill-down % "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1]) (second (rest (synonym "D:/data/星星分词.xlsx" "人物" "名词" "形容词"))))
+              "D:/data/星星分词.xlsx"
+              "人物" "名词" "形容词")
+             "数据"
+             "D:/data/测它一下")
+
+#_(count (add-category (mapcat #(drill-down % "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1]) (second (rest (synonym "D:/data/星星分词.xlsx" "人物" "名词" "形容词"))))
+              "D:/data/星星分词.xlsx"
+              "人物" "名词" "形容词"))
+
+(insert-by-part "xuetestmaterial" (add-category (mapcat #(drill-down % "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1])
+                                                        (second (rest (synonym "D:/data/星星分词2.xlsx" "人物" "概念" "描述" "元素"))))
+              "D:/data/星星分词2.xlsx"
+              "人物" "概念" "描述" "元素"))
+
+(add-category (mapcat #(drill-down % "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1])
+                                                        (second (rest (synonym "D:/data/星星分词2.xlsx" "人物" "概念" "描述" "元素"))))
+              "D:/data/星星分词2.xlsx"
+              "人物" "概念" "描述" "元素")
+
+(second (rest (synonym "D:/data/星星分词2.xlsx" "人物" "概念" "描述" "元素")))
+
+(drill-down "开心" "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1])
+
+(write-excel (map #(dissoc % :_id) (mc/find-maps "xuetestmaterial")) "data" "D:/data/呵呵.xlsx")
 
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
 (flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
 
-(f/show-formatters)
+#_(f/show-formatters)
 
-
+(drill-down % "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1])
