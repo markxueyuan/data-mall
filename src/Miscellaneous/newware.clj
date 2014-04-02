@@ -1,4 +1,4 @@
-(ns Miscellaneous.warehouse
+(ns Miscellaneous.newware
   (:refer-clojure :exclude [sort find])
   (:require [clojure.string :as string]
             [incanter.core :as incanter]
@@ -33,6 +33,9 @@
   (let [parts (partition-all 500 data)]
     (map #(mc/insert-batch collection %) parts)))
 
+
+
+
 (defn integrate-text
   [{:as source}]
   (let [m [:tianya :tieba :weibo :douban :youku]
@@ -58,25 +61,48 @@
         (= source-key :douban) (extract-douban source-address)
         (= source-key :youku) (extract-youku source-address)))
 
+
+
+(mg/connect! {:host "192.168.3.53" :port 7017})
+
+(mg/set-db! (mg/get-db "edu"))
+
+
+(defn parse-date
+  [string]
+  (let [fmt (f/formatter (t/default-time-zone) "yyyy-MM-dd HH:mm:ss" "yyyy-MM-dd HH:mm" "yyyy-MM-dd" "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")]
+    (->> string
+         (f/parse fmt))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;link main;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn link-tieba
+  [db entry]
+  (mc/find-one-as-map db {:url (get entry :url)}))
+
+(->> (mc/find-one-as-map "baidu_tieba_contents" {:_id (ObjectId. "5326cc6aeb78a9650033b8e1")})
+     (link-tieba "baidu_tieba_main"))
+
+
+
 (defn extract-tieba
-  [source-address]
-  (let [m (mc/find-maps source-address)
-        f #(map :text (:minireps %))
-        g (fn [i] (update-in i [:minireps] (partial apply str)))
-        h (fn [i] [(select-keys i [:_id :minireps])
-                   (select-keys i [:_id :text])])
-        j (fn [i] [(assoc {} :mid (:_id (first i)) :text (:minireps (first i)) :level (Integer. 1))
-                   (assoc {} :mid (:_id (second i)) :text (:text (second i)) :level (Integer. 0))])]
-    (->> m
-         (map #(select-keys % [:_id :text :minireps]))
-         (map #(assoc % :minireps (f %)))
-         (map g)
-         (map h)
-         (map j)
-         flatten
-         (remove #(= "" (:text %)))
-         (map #(assoc % :source "tieba"))
-         )))
+  [entry]
+  (let [mini (:minireps entry)
+        fuser #(str (:user_name %))
+        fdate #(parse-date (:time %))
+        floor "m"
+        ftext #(:text %)
+        fmap #(assoc {} :user (fuser %) :date (fdate %) :floor floor :text (ftext %))
+        minimaps (map fmap mini)
+        majormap {:user (:name (:author entry)) :date (parse-date (:postTime entry)) :floor (:floor (:content entry)) :text (:text entry)}
+        allmaps (conj minimaps majormap)
+        idmaps (map #(assoc % :mid (:_id entry)) allmaps)]
+    idmaps
+    ))
+
+
+
+
 
 (defn extract-tianya
   [source-address]
@@ -87,6 +113,12 @@
          (map f)
          (map g)
          )))
+
+(defn extract-tianya
+  [entry]
+  )
+
+;(insert-by-part "xuetesttieba" (apply concat (map #(extract-tieba %) (mc/find-maps "baidu_tieba_contents"))))
 
 (defn extract-weibo
   [source-address]
@@ -452,10 +484,10 @@
 
 ;汇总、导出excel
 
-(-> (word-date-distribution "xuetestsegs" [2013 12 25] [2014 3 1])
+#_(-> (word-date-distribution "xuetestsegs" [2013 12 25] [2014 3 1])
     (write-excel "词频时间分布" "D:/data/来自星星的你social词频.xlsx"))
 
-(->> (mc/find-maps "xuetestmaterial")
+#_(->> (mc/find-maps "xuetestmaterial")
      (map #(dissoc % :_id))
      (#(write-excel % "social数据分类" "D:/data/来自星星的你social数据.xlsx"))
      )
@@ -480,9 +512,9 @@
                 })
 
 
-(insert-by-part "xuetest" (integrate-text locations))
+;(insert-by-part "xuetest" (integrate-text locations))
 
-(insert-by-part "xuetestentries" (all-entries-joda locations))
+;(insert-by-part "xuetestentries" (all-entries-joda locations))
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
 (flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
