@@ -63,25 +63,46 @@
 
 
 
-(mg/connect! {:host "192.168.3.53" :port 7017})
+;(mg/connect! {:host "192.168.3.53" :port 7017})
+
+(mg/connect!)
 
 (mg/set-db! (mg/get-db "edu"))
+
+(defn correct-nil
+  [string]
+  (if (or (= "" string) (nil? string))
+    "1970-1-1"
+    string))
 
 
 (defn parse-date
   [string]
   (let [fmt (f/formatter (t/default-time-zone) "yyyy-MM-dd HH:mm:ss" "yyyy-MM-dd HH:mm" "yyyy-MM-dd" "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")]
-    (->> string
+    (->> (correct-nil string)
          (f/parse fmt))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;link main;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn link-tieba
-  [db entry]
-  (mc/find-one-as-map db {:url (get entry :url)}))
+(defn get-key
+  [from-col to-col from-key to-key]
+  (mc/ensure-index from-col {from-key 1})
+  (let [col (mc/find-maps to-col)]
+    (for [entry col]
+      (let [match (mc/find-one-as-map from-col {from-key (get entry to-key)})]
+        (assoc entry :keyword (:keywords match))))))
 
-(->> (mc/find-one-as-map "baidu_tieba_contents" {:_id (ObjectId. "5326cc6aeb78a9650033b8e1")})
-     (link-tieba "baidu_tieba_main"))
+(defn write-key-db
+  [links]
+  (for [link links]
+    (let [[result-db & origin] link]
+      (->> (apply get-key origin)
+           (insert-by-part result-db)))))
+
+#_(write-key-db [["xuetesttieba" "baidu_tieba_main" "baidu_tieba_contents" :url :url]
+               ["xuetesttianya" "tianya_search" "tianya_content" :url :url]])
+
+
 
 
 
@@ -90,60 +111,61 @@
   (let [mini (:minireps entry)
         fuser #(str (:user_name %))
         fdate #(parse-date (:time %))
-        floor "m"
+        level 3
         ftext #(:text %)
-        fmap #(assoc {} :user (fuser %) :date (fdate %) :floor floor :text (ftext %))
+        fmap #(assoc {} :user (fuser %) :date (fdate %) :level level :text (ftext %))
         minimaps (map fmap mini)
-        majormap {:user (:name (:author entry)) :date (parse-date (:postTime entry)) :floor (:floor (:content entry)) :text (:text entry)}
+        mlevel (if (> (:floor (:content entry)) 1) 2 1)
+        majormap {:user (:name (:author entry)) :date (parse-date (:postTime entry)) :level mlevel :text (:text entry)}
         allmaps (conj minimaps majormap)
-        idmaps (map #(assoc % :mid (:_id entry)) allmaps)]
+        idmaps (map #(assoc % :mid (:_id entry) :keyword (:keyword entry) :source "tieba" :title (:title entry))
+                    allmaps)]
     idmaps
     ))
 
-
-
-
-
-(defn extract-tianya
-  [source-address]
-  (let [m (mc/find-maps source-address)
-        f #(select-keys % [:_id :content])
-        g #(assoc {} :mid (:_id %) :text (:content %) :level (Integer. 0) :source "tianya")]
-    (->> m
-         (map f)
-         (map g)
-         )))
+;(insert-by-part "xuetesttiebaextract"(apply concat (map #(extract-tieba %) (mc/find-maps "xuetesttieba"))))
 
 (defn extract-tianya
   [entry]
-  )
+  (let [user (:author entry)
+        date (parse-date (:pubtime entry))
+        level (if (> (:floor entry) 0) 2 1)
+        text (:content entry)
+        mid (:_id entry)
+        kw (:keyword entry)
+        source "tianya"
+        title (:title entry)]
+    {:user user :date date :level level :text text :mid mid :keyword kw :source source :title title}))
 
-;(insert-by-part "xuetesttieba" (apply concat (map #(extract-tieba %) (mc/find-maps "baidu_tieba_contents"))))
+;(insert-by-part "xuetesttianyaextract" (map #(extract-tianya %) (mc/find-maps "xuetesttianya")))
 
 (defn extract-weibo
-  [source-address]
-  (let [m (mc/find-maps source-address)
-        f #(select-keys % [:_id :text])
-        g #(assoc {} :mid (:_id %) :text (:text %) :level (Integer. 0) :source "weibo")]
-    (->> m
-         (map f)
-         (map g))))
+  [entry]
+  (let [user (:userName entry)
+        date (->> (:pubtime entry)
+                  ((fn [t] (if (nil? t) 0 t)))
+                  long
+                  joda/from-long
+                  (#(t/to-time-zone % (t/time-zone-for-offset +8))))
+        level (if (nil? (:origPostUrl entry)) 1 2)
+        text (:text entry)
+        mid (:_id entry)
+        kw (:keyword (:opts entry))
+        source "weibo"
+        original (:origPostUrl entry)
+        userid (:userId entry)]
+    {:user user :date date :level level :text text :mid mid :keyword kw :source source :origPostUrl original :userId userid}))
+
+
+
+;(insert-by-part "xuetesweiboextract" (map #(extract-weibo %) (mc/find-maps "weibo_history")))
+
 
 (defn extract-douban
-  [source-address]
-  (let [m (mc/find-maps source-address)
-        f #(select-keys % [:_id :comment])
-        g #(assoc {} :mid (:_id %) :text (:comment %) :level (Integer. 0) :source "douban")]
-    (->> m
-         (map f)
-         (map g))))
+  [entry])
 
 (defn extract-youku
-  [source-address]
-  (let [m (mc/find-maps source-address)
-        f #(select-keys % [:_id :text])]
-    (map #(assoc % :level (Integer. 0) :source "youku") (map f m))
-  ))
+  [entry])
 
 
 
@@ -182,66 +204,7 @@
 
 ;(insert-by-part "word_count" (word-seg (mc/find-maps "xuetest") :text :source :mid))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;associate date;;;;;;;;;;;;;;;;;;;;;;
 
-(defn correct-nil
-  [stuff col-key entry]
-  (if (or (= "" (col-key entry))(nil? (col-key entry)))
-    (assoc entry col-key stuff)
-  entry))
-
-(defn parse-date
-  [string]
-  (let [fmt (f/formatter (t/default-time-zone) "yyyy-MM-dd HH:mm:ss" "yyyy-MM-dd HH:mm" "yyyy-MM-dd" "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")]
-    (->> string
-         (f/parse fmt))))
-
-(defn extract-date
-  [location {:keys [source mid] :as entry}]
-  (case source
-    "tianya" (->> (:tianya location)
-                  (#(mc/find-one-as-map % {:_id mid} {:_id 0 :pubtime 1}))
-                  (correct-nil "1970-1-1":pubtime)
-                  :pubtime
-                  parse-date)
-    "douban" (->> (:douban location)
-                  (#(mc/find-one-as-map % {:_id mid} {:_id 0 :pubdate 1}))
-                  (correct-nil "1970-1-1":pubdate)
-                  :pubdate
-                  parse-date
-                  )
-    "tieba" (->> (:tieba location)
-                 (#(mc/find-one-as-map % {:_id mid} {:_id 0 "content.date" 1}))
-                 :content
-                 (correct-nil "1970-1-1":date)
-                 :date
-                 parse-date
-                 )
-    "weibo" (->> (:weibo location)
-                 (#(mc/find-one-as-map % {:_id mid} {:_id 0 :pubtime 1}))
-                 (correct-nil 0 :date)
-                 :pubtime
-                 long
-                 joda/from-long
-                 (#(t/to-time-zone % (t/time-zone-for-offset +8)))
-                 )
-    ;"youku" (->> (:youku location)
-                 ;(#(mc/find-one-as-map % {:_id mid} {:_id 0 :pubtime 1}))
-                 ;)
-    ))
-
-;(extract-date locations {:source "weibo" :mid (ObjectId. "530ec0ad07b83b420009e8b5")})
-
-(defn associate-date
-  [location {:as entry}]
-  (assoc entry :pubdate (l/format-local-time (extract-date location entry) :date)))
-
-(defn associate-joda-date
-  [location {:as entry}]
-  (let [joda (extract-date location entry)
-        string (l/format-local-time (extract-date location entry) :date)
-        date (f/parse (f/formatter (t/default-time-zone) "YYYY-MM-dd" "YYYY/MM/dd") string)]
-    (assoc entry :pubdate date)))
 
 
 
