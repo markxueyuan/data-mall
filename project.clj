@@ -6,8 +6,9 @@
   :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))
                  "mvn-repo" "http://ansjsun.github.io/mvn-repo/"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [incanter/incanter-core "1.5.4"]
-                 [incanter/incanter-io "1.5.4"]
+                 ;[incanter/incanter-core "1.5.4"]
+                 ;[incanter/incanter-io "1.5.4"]
+                 [incanter "1.5.4"]
                  [org.clojure/data.json "0.2.3"]
                  [org.clojure/java.jdbc "0.3.0"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
