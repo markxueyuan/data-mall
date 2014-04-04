@@ -72,7 +72,6 @@
                ["xuetesttianya" "tianya_search" "tianya_content" :url :url]])
 
 
-
 (defn read-data
   [collection]
   (mc/find-maps collection))
@@ -85,12 +84,12 @@
         fdate #(parse-date (:time %))
         level 3
         ftext #(:text %)
-        fmap #(assoc {} :user (fuser %) :date (fdate %) :level level :text (ftext %))
+        fmap #(assoc {} :user (fuser %) :pubdate (fdate %) :level level :text (ftext %))
         minimaps (map fmap mini)
         mlevel (if (> (:floor (:content entry)) 1) 2 1)
-        majormap {:user (:name (:author entry)) :date (parse-date (:postTime entry)) :level mlevel :text (:text entry)}
+        majormap {:user (:name (:author entry)) :pubdate (parse-date (:postTime entry)) :level mlevel :text (:text entry)}
         allmaps (conj minimaps majormap)
-        idmaps (map #(assoc % :mid (:_id entry) :keyword (:keyword entry) :source "tieba" :title (:title entry) :url (:url entry))
+        idmaps (map #(assoc % :_id (ObjectId.) :mid (:_id entry) :keyword (:keyword entry) :source "tieba" :title (:title entry) :url (:url entry))
                     allmaps)]
     idmaps
     ))
@@ -109,7 +108,7 @@
         source "tianya"
         title (:title entry)
         url (:url entry)]
-    {:user user :date date :level level :text text :mid mid :keyword kw :source source :title title :url url}))
+    {:user user :pubdate date :level level :text text :_id (ObjectId.) :mid mid :keyword kw :source source :title title :url url}))
 
 ;(insert-by-part "xuetesttianyaextract" (map #(extract-tianya %) (mc/find-maps "xuetesttianya")))
 
@@ -129,7 +128,7 @@
         original (:origPostUrl entry)
         userid (:userId entry)
         url (:weiboUrl entry)]
-    {:user user :date date :level level :text text :mid mid :keyword kw :source source :origPostUrl original :userId userid :url url}))
+    {:user user :pubdate date :level level :text text :_id (ObjectId.) :mid mid :keyword kw :source source :origPostUrl original :userId userid :url url}))
 
 
 
@@ -224,32 +223,23 @@
   [source data-table seg-table]
   (let [col (integrate source)
         seg (word-seg col)]
-    ;(future (insert-by-part data-table col))
+    (future (doall (insert-by-part data-table col)))
     (doall (insert-by-part seg-table seg))
     ))
 
-(write-result source "xuetestintegrate" "xuetestsegs")
+;(write-result source "xuetestintegrate" "xuetestsegs")
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;word-seg-all;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;(def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
 
-(defn make-all
-  [locations]
-  (->> locations
-       integrate-text
-       (map #(associate-date locations %))
-       (#(word-seg % :text :source :mid :pubdate :_id))))
+(write-result tieba-source "xuetestintegrate" "xuetestsegs")
 
-(defn make-all-joda
-  [locations]
-  (->> locations
-       integrate-text
-       (map #(associate-joda-date locations %))
-       (#(word-seg % :text :source :mid :pubdate :_id))
-       ;(take 5)
-       ))
+(def baidu-tianya-source {:tianya ["baidurealtime_tianya0404" "tianya_content0404" :encrypedLink :url]})
 
-;(make-all-joda locations)
+(write-result baidu-tianya-source "xuetestintegrate" "xuetestsegs")
 
+;(def weibo-source {:weibo ["weibo_history"]})
+
+;(write-result weibo-source "xuetestintegrate" "xuetestsegs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -296,6 +286,23 @@
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
 ;(mc/find-maps "xuetestsegs")
+
+
+
+(defmacro result [] `(concat (word-date-distribution "xuetestsegs" [2013 10 1] [2013 11 1])
+(word-date-distribution "xuetestsegs" [2013 11 2] [2013 12 1])
+(word-date-distribution "xuetestsegs" [2013 12 2] [2014 1 1])
+(word-date-distribution "xuetestsegs" [2014 1 2] [2014 2 1])
+(word-date-distribution "xuetestsegs" [2014 2 2] [2014 3 1])
+(word-date-distribution "xuetestsegs" [2014 3 2] [2014 4 1])))
+
+;(result)
+
+;(write-excel (pt/pivot-table [:date :word] [:counts] [pt/sum] (result)) "词频" "E:/data/教育词频.xlsx")
+
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;drilling down;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -451,13 +458,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;教育品牌;;;;;;;;;;;;;;;;;;;;;;;
 
 ;连接数据库
-(mg/connect! {:host "192.168.3.53" :port 7017})
+;(mg/connect! {:host "192.168.3.53" :port 7017})
 
-(mg/set-db! (mg/get-db "edu"))
+;(mg/set-db! (mg/get-db "edu"))
 
 
 
-(def locations {:tianya "tianya_content"
+#_(def locations {:tianya "tianya_content"
                 :tieba "baidu_tieba_contents"
                 :gada "haha"
                 :weibo "star_weibo_history"
