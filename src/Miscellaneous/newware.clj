@@ -26,8 +26,6 @@
 
 
 
-(declare extract-text extract-tieba extract-tianya extract-weibo extract-douban extract-youku)
-
 (defn insert-by-part
   [collection data]
   (let [parts (partition-all 500 data)]
@@ -35,39 +33,10 @@
 
 
 
+(mg/connect! {:host "192.168.1.184" :port 7017})
 
-(defn integrate-text
-  [{:as source}]
-  (let [m [:tianya :tieba :weibo :douban :youku]
-        s (set (keys source))
-        job (filter s m)]
-    (mapcat #(extract-text % (get source %)) job)))
-
-#_(insert-by-part "xuetest" (integrate-text {:tianya "star_tianya_content"
-                                          :douban "star_douban_shortcomments"
-                                          :tieba "star_baidutieba_contents"
-                                          :gada "haha"
-                                          :weibo "star_weibo_history"
-                                          ;:youku "star_youku_video"
-                                           }))
-
-;(integrate-text locations)
-
-(defn extract-text
-  [source-key source-address]
-  (cond (= source-key :tianya) (extract-tianya source-address)
-        (= source-key :tieba) (extract-tieba source-address)
-        (= source-key :weibo) (extract-weibo source-address)
-        (= source-key :douban) (extract-douban source-address)
-        (= source-key :youku) (extract-youku source-address)))
-
-
-
-;(mg/connect! {:host "192.168.3.53" :port 7017})
-
-(mg/connect!)
-
-(mg/set-db! (mg/get-db "edu"))
+;(mg/connect!)
+(mg/set-db! (mg/get-db "xuetest"))
 
 (defn correct-nil
   [string]
@@ -104,6 +73,9 @@
 
 
 
+(defn read-data
+  [collection]
+  (mc/find-maps collection))
 
 
 (defn extract-tieba
@@ -118,12 +90,13 @@
         mlevel (if (> (:floor (:content entry)) 1) 2 1)
         majormap {:user (:name (:author entry)) :date (parse-date (:postTime entry)) :level mlevel :text (:text entry)}
         allmaps (conj minimaps majormap)
-        idmaps (map #(assoc % :mid (:_id entry) :keyword (:keyword entry) :source "tieba" :title (:title entry))
+        idmaps (map #(assoc % :mid (:_id entry) :keyword (:keyword entry) :source "tieba" :title (:title entry) :url (:url entry))
                     allmaps)]
     idmaps
     ))
 
 ;(insert-by-part "xuetesttiebaextract"(apply concat (map #(extract-tieba %) (mc/find-maps "xuetesttieba"))))
+
 
 (defn extract-tianya
   [entry]
@@ -134,8 +107,9 @@
         mid (:_id entry)
         kw (:keyword entry)
         source "tianya"
-        title (:title entry)]
-    {:user user :date date :level level :text text :mid mid :keyword kw :source source :title title}))
+        title (:title entry)
+        url (:url entry)]
+    {:user user :date date :level level :text text :mid mid :keyword kw :source source :title title :url url}))
 
 ;(insert-by-part "xuetesttianyaextract" (map #(extract-tianya %) (mc/find-maps "xuetesttianya")))
 
@@ -153,8 +127,9 @@
         kw (:keyword (:opts entry))
         source "weibo"
         original (:origPostUrl entry)
-        userid (:userId entry)]
-    {:user user :date date :level level :text text :mid mid :keyword kw :source source :origPostUrl original :userId userid}))
+        userid (:userId entry)
+        url (:weiboUrl entry)]
+    {:user user :date date :level level :text text :mid mid :keyword kw :source source :origPostUrl original :userId userid :url url}))
 
 
 
@@ -169,11 +144,40 @@
 
 
 
-#_(with-collection "star_baidunews_history"
-  find{})
+(defn prepare-data
+  ([extract-fn from-col to-col from-key to-key]
+   (->> (get-key from-col to-col from-key to-key)
+        (map extract-fn)))
+  ([extract-fn col]
+   (map extract-fn (read-data col))))
+
+;(prepare-data extract-weibo "weibo_history")
+
+;(prepare-data extract-tieba "baidu_tieba_main" "baidu_tieba_contents" :url :url)
 
 
+(defn utility
+  [source-key source-docs]
+  (cond (= source-key :tianya) (apply (partial prepare-data extract-tianya) source-docs)
+        (= source-key :tieba) (apply concat (apply (partial prepare-data extract-tieba) source-docs))
+        (= source-key :weibo) (apply (partial prepare-data extract-weibo) source-docs)
+        (= source-key :douban) (apply (partial prepare-data extract-douban) source-docs)
+        (= source-key :youku) (apply (partial prepare-data extract-youku) source-docs)))
 
+
+(defn integrate
+  [{:as source}]
+  (let [m [:tianya :tieba :weibo :douban :youku]
+        s (set (keys source))
+        job (filter s m)]
+    (mapcat #(utility % (get source %)) job)))
+
+(def source {:weibo ["weibo_history"]
+             :tianya ["tianya_search" "tianya_content" :url :url]
+             :tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]
+             :haha []})
+
+;(insert-by-part "xuetestintegrate" (integrate source))
 
 
 
@@ -188,7 +192,7 @@
 
 ;(unwind {:a 1 :b 2 :word-seg [{:word 4 :nature 5} {:word 6 :nature 7}]})
 
-(defn word-seg
+(defn word-seg-utility
   [collections target-key & kws]
   (->> collections
        ;(take 5)
@@ -202,37 +206,29 @@
        ;(map #(assoc (first %) :counts (second %)))
        ))
 
-;(insert-by-part "word_count" (word-seg (mc/find-maps "xuetest") :text :source :mid))
+;(insert-by-part "word_count" (word-seg-utility (mc/find-maps "xuetest") :text :source :mid))
 
 
 
+(defn word-seg
+  [collection]
+  (->> collection
+       (#(word-seg-utility % :text :source :mid :pubdate :_id))
+       (map #(assoc (dissoc % :_id) :mid2 (:_id %)))
+       distinct))
+
+;(insert-by-part "xuetestsegs"(word-seg (mc/find-maps "xuetestentries")))
 
 
-(defn all-entries
-  [locations]
-  (->> locations
-       integrate-text
-       (map #(associate-date locations %))
-       ))
+(defn write-result
+  [source data-table seg-table]
+  (let [col (integrate source)
+        seg (word-seg col)]
+    ;(future (insert-by-part data-table col))
+    (doall (insert-by-part seg-table seg))
+    ))
 
-(defn all-entries-joda
-  [locations]
-  (->> locations
-       integrate-text
-       (map #(associate-joda-date locations %))
-       ))
-
-;(all-entries locations)
-
-
-;(insert-by-part "xuetestentries" (all-entries-joda locations))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;extract key;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn extract-key
-  [db {:keys []:as entry}]
-
+(write-result source "xuetestintegrate" "xuetestsegs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;word-seg-all;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -254,13 +250,6 @@
 
 ;(make-all-joda locations)
 
-(defn word-seg-all
-  [collection]
-  (->> collection
-       (#(word-seg % :text :source :mid :pubdate :_id))
-       (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
-
-;(insert-by-part "xuetestsegs"(word-seg-all (mc/find-maps "xuetestentries")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
