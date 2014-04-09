@@ -63,4 +63,9 @@
         sums (sum col)]
     (/ sums nums)))
 
+(defn put-in-set
+  [col]
+  (into #{} col)
+  )
+
 #_(pt/pivot-table [:score :time] [:vote :id] [pt/sum pt/list-it] (jdbc/query db-spec1 [query-14]))

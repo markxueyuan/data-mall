@@ -9,6 +9,7 @@
             [monger.operators :refer :all]
             [monger.query :refer :all]
             [monger.joda-time :as mjt]
+            [monger.multi.collection :as mmc]
             [data-mall.ansj-seg :as seg]
             [data-mall.synonym :as syn]
             [data-mall.pivot-table :as pt]
@@ -23,6 +24,7 @@
   (:use clj-excel.core))
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;extract text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -34,10 +36,10 @@
 
 
 
-(mg/connect! {:host "192.168.1.184" :port 7017})
+;(mg/connect! {:host "192.168.1.184" :port 7017})
 
 ;(mg/connect!)
-(mg/set-db! (mg/get-db "xuetest"))
+;(mg/set-db! (mg/get-db "xuetest"))
 
 (defn correct-nil
   [string]
@@ -61,6 +63,16 @@
     (for [entry col]
       (let [match (mc/find-one-as-map from-col {from-key (get entry to-key)})]
         (assoc entry :keyword (:keywords match))))))
+
+(defn get-key-p5
+  [from-col to-col from-key to-key _]
+  (mc/ensure-index from-col {from-key 1})
+  (let [col (mc/find-maps to-col)]
+    (for [entry col]
+      (let [match (mc/find-one-as-map from-col {from-key (get entry to-key)})]
+        (assoc entry :keyword (:keywords match) :p5 (:p5 match))))))
+
+
 
 (defn write-key-db
   [links]
@@ -111,6 +123,20 @@
         url (:url entry)]
     {:user user :pubdate date :level level :text text :_id (ObjectId.) :mid mid :keyword kw :source source :title title :url url}))
 
+(defn extract-baidu-tianya
+  [entry]
+  (let [user (:author entry)
+        date (parse-date (:pubtime entry))
+        level (if (> (:floor entry) 0) 2 1)
+        text (:content entry)
+        mid (:_id entry)
+        kw (:keyword entry)
+        source "tianya"
+        title (:title entry)
+        url (:url entry)
+        p5 (:p5 entry)]
+    {:user user :pubdate date :level level :text text :_id (ObjectId.) :mid mid :keyword kw :source source :title title :url url :p5 p5}))
+
 ;(insert-by-part "xuetesttianyaextract" (map #(extract-tianya %) (mc/find-maps "xuetesttianya")))
 
 (defn extract-weibo
@@ -149,7 +175,10 @@
    (->> (get-key from-col to-col from-key to-key)
         (map extract-fn)))
   ([extract-fn col]
-   (map extract-fn (read-data col))))
+   (map extract-fn (read-data col)))
+  ([extract-fn from-col to-col from-key to-key _]
+   (->> (get-key-p5 from-col to-col from-key to-key _)
+        (map extract-fn))))
 
 ;(prepare-data extract-weibo "weibo_history")
 
@@ -162,15 +191,19 @@
         (= source-key :tieba) (apply concat (apply (partial prepare-data extract-tieba) source-docs))
         (= source-key :weibo) (apply (partial prepare-data extract-weibo) source-docs)
         (= source-key :douban) (apply (partial prepare-data extract-douban) source-docs)
-        (= source-key :youku) (apply (partial prepare-data extract-youku) source-docs)))
+        (= source-key :youku) (apply (partial prepare-data extract-youku) source-docs)
+        (= source-key :baidu-tianya) (apply (partial prepare-data extract-baidu-tianya) source-docs)))
 
 
 (defn integrate
   [{:as source}]
-  (let [m [:tianya :tieba :weibo :douban :youku]
+  (let [m [:tianya :tieba :weibo :douban :youku :baidu-tianya]
         s (set (keys source))
         job (filter s m)]
     (mapcat #(utility % (get source %)) job)))
+
+
+
 
 (def source {:weibo ["weibo_history"]
              :tianya ["tianya_search" "tianya_content" :url :url]
@@ -239,7 +272,7 @@
         filt #(t/within? (t/interval st et) (:pubdate %))]
     (filter filt entries)))
 
-(time-filter [2013 10 1] [2014 4 1] (integrate baidu-tianya-source))
+;(time-filter [2013 10 1] [2014 4 1] (integrate baidu-tianya-source))
 
 
 (defn black-list
@@ -274,17 +307,21 @@
 
 ;(write-result source "xuetestintegrate" "xuetestsegs")
 
-;(def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
+(def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
 
-;(write-result tieba-source "xuetestintegrate" "xuetestsegs")
+(write-result tieba-source "xuetestintegrate" "xuetestsegs")
 
-(def baidu-tianya-source {:tianya ["baidurealtime_tianya0404" "tianya_content0404" :encrypedLink :url]})
+(def baidu-tianya-source {:baidu-tianya ["baidurealtime_tianya" "tianya_content" :encrypedLink :url :p5-on]})
 
-(def filters (filt (partial time-filter [2013 10 1] [2014 4 1])
+;(def filters (filt (partial time-filter [2013 10 1] [2014 4 1])
                    ;(partial text-filter (black-list "D:/data/blacklist.txt") :text)
-                   ))
+                   ;))
 
-(write-result baidu-tianya-source filters "xuetestintegrate2" "xuetestsegs2")
+(write-result baidu-tianya-source "xuetestintegrate" "xuetestsegs")
+
+(def weibo-source {:weibo ["weibohis_edu0404"]})
+
+(write-result weibo-source "xuetestintegrate" "xuetestsegs")
 
 ;(write-result baidu-tianya-source "xuetestintegrate" "xuetestsegs")
 
@@ -515,6 +552,31 @@
 
 ;(mg/set-db! (mg/get-db "edu"))
 
+(mg/connect! {:host "192.168.1.184" :port 7017})
+(mg/set-db! (mg/get-db "xuetest"))
+
+;(def aa (mc/find-maps "baidurealtime_tianya" {:p5 {$lte 20}} {:encrypedLink 1}))
+
+(def cc (mc/find-maps "baidurealtime_tianya" {:keywords "新东方|||烹饪" :p5 {$gt 20 $lte 100}} ))
+
+cc
+
+(def full (mc/find-maps "baidurealtime_tianya" {:p5 {$lte 20}}))
+
+full
+
+(defn xx
+  [col]
+  (->> (pt/pivot-table [:keywords :p5] [:encrypedLink] [first] col)
+     (map :encrypedLink)
+     distinct
+     (map #(assoc {} :_id %))
+     ;count
+     ))
+
+;(count (xx cc))
+
+(mmc/insert-batch (mg/get-db "gu_chain") "baidurealtime_tianya" (xx cc))
 
 
 #_(def locations {:tianya "tianya_content"
@@ -532,5 +594,3 @@
 (flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
 
 #_(f/show-formatters)
-
-
