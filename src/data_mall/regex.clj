@@ -38,3 +38,10 @@
 (re)
 
 (seq "我爱你,中国")
+
+(def reg #"你好|啊")
+
+(not (boolean (re-find reg "年轻人你好啊！")))
+(re-seq reg "年轻人你好啊！")
+
+

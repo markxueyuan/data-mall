@@ -16,6 +16,7 @@
             [clj-time.format :as f]
             [clj-time.coerce :as joda]
             [clj-time.local :as l]
+            [clojure.string :as string]
             )
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId)
@@ -213,8 +214,7 @@
   [collection]
   (->> collection
        (#(word-seg-utility % :text :source :mid :pubdate :_id))
-       (map #(assoc (dissoc % :_id) :mid2 (:_id %)))
-       distinct))
+       (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
 
 ;(insert-by-part "xuetestsegs"(word-seg (mc/find-maps "xuetestentries")))
 
@@ -227,15 +227,68 @@
     (doall (insert-by-part seg-table seg))
     ))
 
+(defn filt
+  [& fns]
+  (apply comp fns))
+
+(defn time-filter
+  [start-time end-time entries]
+  (let [readin-time #(t/from-time-zone (apply t/date-time %) (t/time-zone-for-offset +8))
+        st (readin-time start-time)
+        et (readin-time end-time)
+        filt #(t/within? (t/interval st et) (:pubdate %))]
+    (filter filt entries)))
+
+(time-filter [2013 10 1] [2014 4 1] (integrate baidu-tianya-source))
+
+
+(defn black-list
+  [file]
+  (let [word-list (string/split (slurp file) #"\r\n")]
+    (re-pattern (apply str  (first word-list)
+                       (map #(str "|" %) (rest word-list))))))
+
+
+(defn text-filter
+  [blacklist column entries]
+  (when-let [filt #(not (boolean (re-find (black-list blacklist) (get % column "NULL"))))]
+    (filter filt entries)))
+
+
+
+(defn write-result
+  ([source filters data-table seg-table]
+  (let [col (integrate source)
+        filt (filters col)
+        seg (word-seg filt)]
+    (future (doall (insert-by-part data-table filt)))
+    (doall (insert-by-part seg-table seg))
+    ))
+  ([source data-table seg-table]
+   (let [col (integrate source)
+        seg (word-seg col)]
+    (future (doall (insert-by-part data-table col)))
+    (doall (insert-by-part seg-table seg))
+    )))
+
+
 ;(write-result source "xuetestintegrate" "xuetestsegs")
 
 ;(def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
 
-(write-result tieba-source "xuetestintegrate" "xuetestsegs")
+;(write-result tieba-source "xuetestintegrate" "xuetestsegs")
 
 (def baidu-tianya-source {:tianya ["baidurealtime_tianya0404" "tianya_content0404" :encrypedLink :url]})
 
-(write-result baidu-tianya-source "xuetestintegrate" "xuetestsegs")
+(def filters (filt (partial time-filter [2013 10 1] [2014 4 1])
+                   ;(partial text-filter (black-list "D:/data/blacklist.txt") :text)
+                   ))
+
+(write-result baidu-tianya-source filters "xuetestintegrate2" "xuetestsegs2")
+
+;(write-result baidu-tianya-source "xuetestintegrate" "xuetestsegs")
+
+
 
 ;(def weibo-source {:weibo ["weibo_history"]})
 

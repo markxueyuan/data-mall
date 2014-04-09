@@ -2,7 +2,7 @@
   (import org.jfree.chart.JFreeChart
         org.jfree.chart.axis.NumberAxis)
   (:require (incanter [core :as incanter]
-                      ;[charts :as charts]
+                      [charts :as charts]
                       [stats :as stats]
                       [datasets :as datasets]
                       [io :as io]

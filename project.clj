@@ -6,8 +6,8 @@
   :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))
                  "mvn-repo" "http://ansjsun.github.io/mvn-repo/"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [jfree/jcommon "1.0.16"]
-                 [jfree/jfreechart "1.0.13"]
+                 ;[jfree/jcommon "1.0.16"]
+                 ;[jfree/jfreechart "1.0.13"]
                  [incanter "1.5.4"]
                  [org.clojure/data.json "0.2.3"]
                  [org.clojure/java.jdbc "0.3.0"]
