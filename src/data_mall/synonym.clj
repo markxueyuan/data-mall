@@ -120,6 +120,21 @@
 "j" "简称"
 "l" "常用语"})
 
+(def edu-synonyms
+  {"新东方|||烹饪" "新东方"
+   "巨人教育" "巨人教育"
+   "ATA考试" "ATA"
+   "正保" "正保"
+   "新东方" "新东方"
+   "京翰" "京翰"
+   "正保教育" "正保"
+   "龙文教育" "龙文"
+   "学而思" "学而思"
+   "弘成教育" "弘成"
+   "ATA" "ATA"
+   "学大教育" "学大"
+   "京翰教育" "京翰"})
+
 (defn han
   [k entry]
   (let [synm (speech-synonyms (k entry) (k entry))]
@@ -139,7 +154,8 @@
   (let [ans-machine {"1 + 1 =" "2"}]
     (ans-machine question question)))
 
-
+(-> (vals speech-synonyms)
+    distinct)
 
 
 

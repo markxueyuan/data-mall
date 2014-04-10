@@ -246,7 +246,7 @@
 (defn word-seg
   [collection]
   (->> collection
-       (#(word-seg-utility % :text :source :mid :pubdate :_id))
+       (#(word-seg-utility % :text :source :mid :pubdate :_id :keyword))
        (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
 
 ;(insert-by-part "xuetestsegs"(word-seg (mc/find-maps "xuetestentries")))
@@ -287,6 +287,10 @@
   (when-let [filt #(not (boolean (re-find (black-list blacklist) (get % column "NULL"))))]
     (filter filt entries)))
 
+(defn synonym-filter
+  [syno-map entries]
+  (map #(syn/category :keyword % syno-map) entries))
+
 
 
 (defn write-result
@@ -304,12 +308,14 @@
     (doall (insert-by-part seg-table seg))
     )))
 
+(def edu-filter (partial synonym-filter syn/edu-synonyms))
+
 
 ;(write-result source "xuetestintegrate" "xuetestsegs")
 
 (def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
 
-(write-result tieba-source "xuetestintegrate" "xuetestsegs")
+(write-result tieba-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 (def baidu-tianya-source {:baidu-tianya ["baidurealtime_tianya" "tianya_content" :encrypedLink :url :p5-on]})
 
@@ -317,19 +323,15 @@
                    ;(partial text-filter (black-list "D:/data/blacklist.txt") :text)
                    ;))
 
-(write-result baidu-tianya-source "xuetestintegrate" "xuetestsegs")
+(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 (def weibo-source {:weibo ["weibohis_edu0404"]})
 
-(write-result weibo-source "xuetestintegrate" "xuetestsegs")
+(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-;(write-result baidu-tianya-source "xuetestintegrate" "xuetestsegs")
+(def weibo-source {:weibo ["weibo_history"]})
 
-
-
-;(def weibo-source {:weibo ["weibo_history"]})
-
-;(write-result weibo-source "xuetestintegrate" "xuetestsegs")
+(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -362,8 +364,8 @@
     )))
 
 (defn word-list
-  [collection nature]
-  (let [result (mc/aggregate collection [{$group {:_id {:word "$word" :nature "$nature"} :counts {$sum 1}}}
+  ([collection nature]
+  (let [result (mc/aggregate collection [{$group {:_id {:keyword "$keyword":word "$word" :nature "$nature"} :counts {$sum 1}}}
                               {$sort {"counts" -1}}
                               {$match {"_id.nature" nature}}
                               ])
@@ -372,26 +374,45 @@
         fn #(assoc {} :word (fword %) :nature (fnature %) :counts (:counts %))
         ]
     (map fn result)))
+  ([collection]
+  (let [result (mc/aggregate collection [{$group {:_id {:keyword "$keyword":word "$word" :nature "$nature"} :counts {$sum 1}}}
+                              {$sort {"counts" -1}}
+                              ;{$match {"_id.nature" nature}}
+                              ])
+        fkey #((comp :keyword :_id) %)
+        fword #((comp :word :_id) %)
+        fnature #((comp :nature :_id) %)
+        fn #(assoc {} :counts (:counts %) :nature (fnature %) :word (fword %) :keyword (fkey %))
+        ]
+    (map fn result))))
+
+(write-excel (word-list "xuetestsegs") "词频" "E:/data/8个教育品牌口碑词频.xlsx")
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
 ;(mc/find-maps "xuetestsegs")
 
+;(write-excel (word-date-distribution "xuetestsegs" [1970 1 1] [2014 4 4]) "词频时间分布" "E:/data/词频时间分布.xlsx")
+
+(defn result
+  []
+  (concat
+   (word-date-distribution "xuetestsegs" [1970 1 1] [2009 10 1])
+    (word-date-distribution "xuetestsegs" [2009 10 2] [2010 10 1])
+    (word-date-distribution "xuetestsegs" [2010 10 2] [2011 10 1])
+    (word-date-distribution "xuetestsegs" [2011 10 2] [2012 10 1])
+    (word-date-distribution "xuetestsegs" [2012 10 2] [2013 7 1])
+    (word-date-distribution "xuetestsegs" [2013 7 2] [2013 8 1])
+    (word-date-distribution "xuetestsegs" [2013 8 2] [2013 10 1])
+    (word-date-distribution "xuetestsegs" [2013 10 2] [2013 11 1])
+           (word-date-distribution "xuetestsegs" [2013 11 2] [2013 12 1])
+           (word-date-distribution "xuetestsegs" [2013 12 2] [2014 1 1])
+           (word-date-distribution "xuetestsegs" [2014 1 2] [2014 2 1])
+           (word-date-distribution "xuetestsegs" [2014 2 2] [2014 3 1])
+           (word-date-distribution "xuetestsegs" [2014 3 2] [2014 4 1])))
 
 
-(defmacro result [] `(concat (word-date-distribution "xuetestsegs" [2013 10 1] [2013 11 1])
-(word-date-distribution "xuetestsegs" [2013 11 2] [2013 12 1])
-(word-date-distribution "xuetestsegs" [2013 12 2] [2014 1 1])
-(word-date-distribution "xuetestsegs" [2014 1 2] [2014 2 1])
-(word-date-distribution "xuetestsegs" [2014 2 2] [2014 3 1])
-(word-date-distribution "xuetestsegs" [2014 3 2] [2014 4 1])))
-
-;(result)
-
-;(write-excel (pt/pivot-table [:date :word] [:counts] [pt/sum] (result)) "词频" "E:/data/教育词频.xlsx")
-
-
-
+(insert-by-part "xuetestworddistribution" (result))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;drilling down;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -557,13 +578,13 @@
 
 ;(def aa (mc/find-maps "baidurealtime_tianya" {:p5 {$lte 20}} {:encrypedLink 1}))
 
-(def cc (mc/find-maps "baidurealtime_tianya" {:keywords "新东方|||烹饪" :p5 {$gt 20 $lte 100}} ))
+;(def cc (mc/find-maps "baidurealtime_tianya" {:keywords "新东方|||烹饪" :p5 {$gt 20 $lte 100}} ))
 
-cc
+;cc
 
-(def full (mc/find-maps "baidurealtime_tianya" {:p5 {$lte 20}}))
+;(def full (mc/find-maps "baidurealtime_tianya" {:p5 {$lte 20}}))
 
-full
+;full
 
 (defn xx
   [col]
@@ -576,7 +597,7 @@ full
 
 ;(count (xx cc))
 
-(mmc/insert-batch (mg/get-db "gu_chain") "baidurealtime_tianya" (xx cc))
+;(mmc/insert-batch (mg/get-db "gu_chain") "baidurealtime_tianya" (xx cc))
 
 
 #_(def locations {:tianya "tianya_content"
@@ -589,6 +610,13 @@ full
 ;(insert-by-part "xuetest" (integrate-text locations))
 
 ;(insert-by-part "xuetestentries" (all-entries-joda locations))
+
+(write-excel (->> (mc/find-maps "xuetestintegrate")
+                  (map #(select-keys % [:source :text :pubdate :title :keyword :level]))
+                  (map #(assoc % :pubdate (l/format-local-time (:pubdate %) :date)))
+                  (remove #(or (= (:text %) "") (= (:text %) nil) (= (:pubdate %) "1970-01-01")))
+                          )
+             "口碑信息" "E:/data/8个教育品牌口碑数据.xlsx")
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
 (flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
