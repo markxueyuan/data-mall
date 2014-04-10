@@ -58,11 +58,11 @@
 
 (c/quick-bench (mc-pi-pmap input-size))
 
-(c/quick-bench (mc-pi-part input-size))
+#_(c/quick-bench (mc-pi-part input-size))
 
-(mc-pi input-size)
+#_(mc-pi input-size)
 
-(c/bench (mc-pi input-size))
+#_(c/bench (mc-pi input-size))
 
 
 
