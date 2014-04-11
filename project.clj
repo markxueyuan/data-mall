@@ -29,7 +29,7 @@
                  [com.novemberain/validateur "2.0.0-beta3"]
                  [org.clojure/tools.trace "0.7.8"]
                  [org.clojure/tools.logging "0.2.6"]
-                 [edu.ucdenver.ccp/kr-sesame-core "1.4.8"]
+                 ;[edu.ucdenver.ccp/kr-sesame-core "1.4.8"]
                  [org.slf4j/slf4j-simple "1.7.6"]
                  [criterium "0.4.3"]
                  ]

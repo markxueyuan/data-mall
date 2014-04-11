@@ -1,16 +1,12 @@
-(ns language.paraIncater
-  (import org.jfree.chart.JFreeChart
-        org.jfree.chart.axis.NumberAxis)
+(ns language.paraIncanter
   (:require (incanter [core :as incanter]
                       [charts :as charts]
                       [stats :as stats]
                       [datasets :as datasets]
                       [io :as io]
-                      [optimize :as opt]
-                      )))
+                      [optimize :as opt])))
 
-(import org.jfree.chart.JFreeChart
-        org.jfree.chart.axis.NumberAxis)
+
 
 (def data-file "D:/data/all_160_in_51.p35.csv")
 
