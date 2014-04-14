@@ -16,7 +16,7 @@
 
 (def data (load-csv "D:/data/all_160.P3.csv" :header true))
 
-data
+;(.numAttributes data)
 
 
 (defn load-arff
