@@ -139,6 +139,27 @@
   (let [rep (string/replace (key entry) #"[\,\n]" "，")]
     (assoc entry key rep)))
 
+(defn seg-stats
+  [db-spec query col]
+  (->> (jdbc/query db-spec [query])
+       (map #(correct-nil "uk" col %))
+       ;(map #(word-seg/word-seg col %))
+       ;(mapcat :word-seg)
+       ;(map #(correct-nil "uk" :nature %))
+       ;(map #(correct-nil "uk" :word %))
+       ;(remove #(> 2 (count (:word %))))
+       ;frequencies
+       ;(map #(assoc (first %) :counts (second %)))
+       ;(map #(synonym/han :nature %))
+       ;(remove #(= (:nature %) "其他"))
+       ;(remove #(= (:nature %) "数量词"))
+       ;(sort #(> (:counts %1) (:counts %2)))
+       ;(toCSV/toCSV2 [:word :nature :counts] address-1)
+     ))
+
+;(jdbc/query db52 [query-15])
+
+;(seg-stats db52 query-15 :contents)
 
 
 ;;;;;;;;csv file address ;;;;;;;
@@ -160,6 +181,8 @@
 (def query-10 "SELECT origin FROM purui0208_2013_spam;")
 (def query-11 "SELECT origin FROM purui0214_2013_spam_dupliremov_media;")
 (def query-12 "SELECT * FROM purui0208_2013_spam;")
+
+
 #_(connectDB3/create-new-table db-spec2
                              "wordseg"
                              (str "id INT NOT NULL AUTO_INCREMENT,"
@@ -185,6 +208,17 @@
                    "group by brand,origin,left(pubtime,10),title,preview;"))
 
 (def query-14 "SELECT * FROM dfl;")
+
+(def query-15 (str "SELECT moviefestival_baidunews_history_rekw.kw, moviefestival_baidunews_history_generic.contents "
+                   "from moviefestival_baidunews_history_rekw "
+                   "left join moviefestival_baidunews_history_generic "
+                   "on moviefestival_baidunews_history_rekw.url = moviefestival_baidunews_history_generic.url;"))
+
+(def query-16 "SSELECT kw,url FROM purui.moviefestival_baidunews_history_rekw;")
+
+(def query-17 "SELECT contents,url FROM purui.moviefestival_baidunews_history_generic;")
+
+(def query-18 "SELECT kw,contents FROM purui.moviefestival_baidunews_history_generic_kw;")
 
 ;;;;;;;;;working area;;;;;;;
 
@@ -240,6 +274,9 @@
      (remove #(> 2 (count (:word %))))
      frequencies
      (map #(assoc (first %) :counts (second %)))
+     (map #(synonym/han :nature %))
+     (remove #(= (:nature %) "其他"))
+     (remove #(= (:nature %) "数量词"))
      (sort #(> (:counts %1) (:counts %2)))
      (toCSV/toCSV2 [:word :nature :counts] address-1)
      )
@@ -352,13 +389,13 @@
 
 ;set5
 
-(def set6 (->> (fromCSV/lazy-read-csv "E:/data/puruifull.csv")
+#_(def set6 (->> (fromCSV/lazy-read-csv "E:/data/puruifull.csv")
      map-csv
      (map (partial url-hash :url))
      (sort-by :url-hash)
      ))
 
-set6
+;set6
 
 ;write into csv
 #_(->> (inner-join-1 set5 set6 :url-hash)
@@ -413,6 +450,33 @@ set6
 
 
 #_(pt/pivot-table [:score :time] [:vote :id] [pt/sum pt/list-it] (jdbc/query db-spec1 [query-14]))
+
+
+
+
+#_(->> (jdbc/query db52 [query-16])
+     (map #(correct-nil "uk" :url %))
+     (remove #(= (:url %) "uk"))
+     (map (partial url-hash :url))
+     (map #(select-keys % [:kw :url-hash]))
+     (sort-by :url-hash))
+
+#_(->> (jdbc/query db-spec2 [query-18])
+     ;identity
+     ;(take 20)
+     (map #(word-seg/word-seg :contents %))
+     (map #(assoc {}  :kw (:kw %) :word-seg (:word-seg %)))
+     (map #(polygamy :kw :word-seg %))
+     (apply concat)
+     (remove #(> 2 (count (:word %))))
+     frequencies
+     (map #(assoc (first %) :counts (second %)))
+     (map #(synonym/han :nature %))
+     (remove #(= (:nature %) "其他"))
+     (remove #(= (:nature %) "数量词"))
+     (sort-by (juxt :kw :nature :counts))
+     (toCSV/toCSV2 [:kw :word :nature :counts] "D:/data/puruifestivalseg.csv")
+     )
 
 
 

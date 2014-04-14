@@ -32,6 +32,7 @@
                  ;[edu.ucdenver.ccp/kr-sesame-core "1.4.8"]
                  [org.slf4j/slf4j-simple "1.7.6"]
                  [criterium "0.4.3"]
+                 [nz.ac.waikato.cms.weka/weka-dev "3.7.10"]
                  ]
 
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
