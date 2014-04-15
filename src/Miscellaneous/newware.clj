@@ -251,6 +251,7 @@
 
 ;(insert-by-part "xuetestsegs"(word-seg (mc/find-maps "xuetestentries")))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;write result;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn write-result
   [source data-table seg-table]
@@ -308,30 +309,30 @@
     (doall (insert-by-part seg-table seg))
     )))
 
-(def edu-filter (partial synonym-filter syn/edu-synonyms))
+#_(def edu-filter (partial synonym-filter syn/edu-synonyms))
 
 
 ;(write-result source "xuetestintegrate" "xuetestsegs")
 
-(def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
+#_(def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
 
-(write-result tieba-source edu-filter "xuetestintegrate" "xuetestsegs")
+#_(write-result tieba-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-(def baidu-tianya-source {:baidu-tianya ["baidurealtime_tianya" "tianya_content" :encrypedLink :url :p5-on]})
+#_(def baidu-tianya-source {:baidu-tianya ["baidurealtime_tianya" "tianya_content" :encrypedLink :url :p5-on]})
 
 ;(def filters (filt (partial time-filter [2013 10 1] [2014 4 1])
                    ;(partial text-filter (black-list "D:/data/blacklist.txt") :text)
                    ;))
 
-(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
+#_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-(def weibo-source {:weibo ["weibohis_edu0404"]})
+#_(def weibo-source {:weibo ["weibohis_edu0404"]})
 
-(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
+#_(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-(def weibo-source {:weibo ["weibo_history"]})
+#_(def weibo-source {:weibo ["weibo_history"]})
 
-(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
+#_(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -386,7 +387,7 @@
         ]
     (map fn result))))
 
-(write-excel (word-list "xuetestsegs") "词频" "E:/data/8个教育品牌口碑词频.xlsx")
+;(write-excel (word-list "xuetestsegs") "词频" "E:/data/8个教育品牌口碑词频.xlsx")
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
@@ -412,7 +413,7 @@
            (word-date-distribution "xuetestsegs" [2014 3 2] [2014 4 1])))
 
 
-(insert-by-part "xuetestworddistribution" (result))
+;(insert-by-part "xuetestworddistribution" (result))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;drilling down;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -469,6 +470,53 @@
 ;(first(rest (synonym "D:/data/星星分词.xlsx" "人物" "名词" "形容词")))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;calculate trends;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(mc/find-maps "mahang_baidunews_counts")
+
+(defn read-time-num
+  [time-num]
+  (->> (* time-num 1000)
+       (joda/from-long)
+       (#(t/to-time-zone % (t/time-zone-for-offset +8)))
+       (f/unparse (f/formatter (t/default-time-zone) "YYYY-MM-dd" "YYYY/MM/dd"))))
+
+(defn read-baidu-trends
+  [coll]
+  (let [correct-nil #(if (nil? %) 0 %)]
+    (->> (map #(update-in % [:start] read-time-num) coll)
+         ;(map #(update-in % [:count] correct-nil))
+         (map #(select-keys % [:count :start :keyword]))
+         (map #(assoc % :date (:start %)))
+         (map #(dissoc % :start)))))
+
+(defn read-weibo-daily-trends
+  [coll]
+  (let [year #(:beginyear (:input %))
+        month #(:beginmonth (:input %))
+        day #(:begindate (:input %))
+        date #(str (year %) "-" (month %) "-" (day %))
+        keyword #(:keyword (:input %))]
+    (map #(assoc {} :count (:count %) :date (date %) :keyword (keyword %)) coll)))
+
+(read-baidu-trends (mc/find-maps "mahang_baidunews_counts"))
+
+(->> "mahang_baidunews_counts"
+     mc/find-maps
+     read-baidu-trends
+     (#(write-excel % "百度新闻趋势" "D:/data/mahang/百度新闻趋势.xlsx")))
+
+(->> "mahang_history"
+     mc/find-maps
+     read-weibo-daily-trends
+     (#(write-excel % "微博趋势" "D:/data/mahang/微博趋势.xlsx")))
+
+
+
+
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;excel output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn write-excel
@@ -485,23 +533,24 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(mg/connect! {:host "192.168.1.184" :port 7017})
 
-;;;;;;;;;;;;;;;;;;;;;;;来自星星的你;;;;;;;;;;;;;;;;;
+(mg/set-db! (mg/get-db "xuetest"))
 
-;连接数据库
-#_(mg/connect! {:host "192.168.3.53" :port 7017})
-
-#_(mg/connect!)
-
-#_(mg/set-db! (mg/get-db "test"))
-
-#_(mg/set-db! (mg/get-db "star"))
 
 (def locations {:tianya "star_tianya_content"
              :douban "star_douban_shortcomments"
              :tieba "star_baidutieba_contents"
              :gada "haha"
              :weibo "star_weibo_history"
+             ;:youku "star_youku_video"
+               })
+
+(def locations2 {:tianya "xuetesttianya"
+             :douban "xuetestdouban"
+             :tieba "xuetesttieba"
+             :gada "haha"
+             :weibo "xuetestweibo"
              ;:youku "star_youku_video"
                })
 
@@ -527,13 +576,7 @@
      distinct
      (insert-by-part "xuetestdouban"))
 
-(def locations2 {:tianya "xuetesttianya"
-             :douban "xuetestdouban"
-             :tieba "xuetesttieba"
-             :gada "haha"
-             :weibo "xuetestweibo"
-             ;:youku "star_youku_video"
-               })
+
 
 ;提取主变量
 
@@ -547,78 +590,17 @@
 #_(insert-by-part "xuetestsegs" (word-seg-all (mc/find-maps "xuetestentries")))
 
 ;提取正文和概念整合
-(insert-by-part "xuetestmaterial" (add-category (mapcat #(drill-down % "xuetestsegs" "xuetestentries" [2013 12 25] [2014 3 1])
+#_(insert-by-part "xuetestmaterial" (add-category (mapcat #(drill-down % "xuetestsegs" "xuetestentries" [2013 12 25] [2014 3 1])
                                                         (second (rest (synonym "D:/data/星星分词0402.xlsx" "人物" "概念" "描述"))))
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
-;汇总、导出excel
-
-#_(-> (word-date-distribution "xuetestsegs" [2013 12 25] [2014 3 1])
-    (write-excel "词频时间分布" "D:/data/来自星星的你social词频.xlsx"))
-
-#_(->> (mc/find-maps "xuetestmaterial")
-     (map #(dissoc % :_id))
-     (#(write-excel % "social数据分类" "D:/data/来自星星的你social数据.xlsx"))
-     )
-
-(def black-list [])
-
-(def white-list [])
-
-;;;;;;;;;;;;;;;;;;;;;;;;;教育品牌;;;;;;;;;;;;;;;;;;;;;;;
-
-;连接数据库
-;(mg/connect! {:host "192.168.3.53" :port 7017})
-
-;(mg/set-db! (mg/get-db "edu"))
-
-(mg/connect! {:host "192.168.1.184" :port 7017})
-(mg/set-db! (mg/get-db "xuetest"))
-
-;(def aa (mc/find-maps "baidurealtime_tianya" {:p5 {$lte 20}} {:encrypedLink 1}))
-
-;(def cc (mc/find-maps "baidurealtime_tianya" {:keywords "新东方|||烹饪" :p5 {$gt 20 $lte 100}} ))
-
-;cc
-
-;(def full (mc/find-maps "baidurealtime_tianya" {:p5 {$lte 20}}))
-
-;full
-
-(defn xx
-  [col]
-  (->> (pt/pivot-table [:keywords :p5] [:encrypedLink] [first] col)
-     (map :encrypedLink)
-     distinct
-     (map #(assoc {} :_id %))
-     ;count
-     ))
-
-;(count (xx cc))
-
-;(mmc/insert-batch (mg/get-db "gu_chain") "baidurealtime_tianya" (xx cc))
 
 
-#_(def locations {:tianya "tianya_content"
-                :tieba "baidu_tieba_contents"
-                :gada "haha"
-                :weibo "star_weibo_history"
-                })
 
-
-;(insert-by-part "xuetest" (integrate-text locations))
-
-;(insert-by-part "xuetestentries" (all-entries-joda locations))
-
-(write-excel (->> (mc/find-maps "xuetestintegrate")
-                  (map #(select-keys % [:source :text :pubdate :title :keyword :level]))
-                  (map #(assoc % :pubdate (l/format-local-time (:pubdate %) :date)))
-                  (remove #(or (= (:text %) "") (= (:text %) nil) (= (:pubdate %) "1970-01-01")))
-                          )
-             "口碑信息" "E:/data/8个教育品牌口碑数据.xlsx")
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 
 (flatten [[{:a 2} {:b 3}] [{:c 4} {:d 5}]])
+
 
 #_(f/show-formatters)
