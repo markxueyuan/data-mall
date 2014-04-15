@@ -44,13 +44,28 @@
           attr-names))
 
 
+;(delete-attrs r/data [:sumlev :county :cbsa :csa :necta :cnecta])
 
+;hiding columns
 
+(defn filter-attributes
+  ([dataset remove-attrs]
+   (let [attrs (map inc (map (partial attr-n dataset) remove-attrs))
+         options (r/->options "-R" (s/join \, (map str attrs)))
+         rm (doto (Remove.)
+              (.setOptions options)
+              (.setInputFormat dataset))]
+     (Filter/useFilter dataset rm))))
 
+(def data-2010
+  (filter-attributes r/data
+                     [:pop100-2000  :housing-units-100-2000
+                      :race-total-2000 :race-white-2000
+                      :race-black-2000 :race-indian-2000
+                      :race-asian-2000 :race-hawaiian-2000
+                      :race-other-2000 :race-two-more-2000]))
 
-
-
-
+(map #(.. data-2010 (attribute %) name) (range (.numAttributes data-2010)))
 
 
 
@@ -76,3 +91,8 @@
 ;is the expanded form of macro
 
 (.attribute r/data 3)
+
+;(join separator coll)
+
+(s/join "," [1 2 3 4 5])
+(s/join \, [1 2 3 4 5])

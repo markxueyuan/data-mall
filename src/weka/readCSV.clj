@@ -24,3 +24,6 @@
    (.getDataSet (doto (ArffLoader.)
                   (.setFile) (File. filename)))))
 
+
+(when-not false 3)
+
