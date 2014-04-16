@@ -22,8 +22,8 @@
 (defn load-arff
   ([filename]
    (.getDataSet (doto (ArffLoader.)
-                  (.setFile) (File. filename)))))
+                  (.setFile (File. filename))))))
 
 
-(when-not false 3)
+
 

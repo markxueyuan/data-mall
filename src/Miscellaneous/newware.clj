@@ -1,5 +1,5 @@
 (ns Miscellaneous.newware
-  (:refer-clojure :exclude [sort find])
+  (:refer-clojure :exclude [find])
   (:require [clojure.string :as string]
             [incanter.core :as incanter]
             [data-mall.connectDB3 :as db]
@@ -7,7 +7,7 @@
             [monger.core :as mg];the following 4 is for mongo use
             [monger.collection :as mc]
             [monger.operators :refer :all]
-            [monger.query :refer :all]
+            ;[monger.query :refer :all]
             [monger.joda-time :as mjt]
             [monger.multi.collection :as mmc]
             [data-mall.ansj-seg :as seg]
@@ -18,6 +18,7 @@
             [clj-time.coerce :as joda]
             [clj-time.local :as l]
             [clojure.string :as string]
+            [data-mall.moving-average :as mv]
             )
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId)
@@ -499,19 +500,43 @@
         keyword #(:keyword (:input %))]
     (map #(assoc {} :count (:count %) :date (date %) :keyword (keyword %)) coll)))
 
-(read-baidu-trends (mc/find-maps "mahang_baidunews_counts"))
-
-(->> "mahang_baidunews_counts"
+#_(->> "mahang_baidunews_counts"
      mc/find-maps
      read-baidu-trends
      (#(write-excel % "百度新闻趋势" "D:/data/mahang/百度新闻趋势.xlsx")))
 
-(->> "mahang_history"
+#_(->> "mahang_history"
      mc/find-maps
      read-weibo-daily-trends
      (#(write-excel % "微博趋势" "D:/data/mahang/微博趋势.xlsx")))
 
+(defn read-weibo-hourly-trends
+  [coll]
+  (let [correct-nil #(if (nil? %) 0 %)
+        year #(:beginyear (:input %))
+        month #(:beginmonth (:input %))
+        day #(:begindate (:input %))
+        date #(t/from-time-zone (t/date-time (year %) (month %) (day %)) (t/time-zone-for-offset +8))
+        hour #(:beginhour (:input %))
+        ct #(correct-nil (:count %))]
+    (map #(assoc {} :date (date %) :hour (hour %) :count (ct %)) coll)))
 
+
+(read-weibo-hourly-trends (mc/find-maps "mahangdailycounts"))
+
+(defn moving-average
+  [coll hour window]
+  (let [type-time #(f/unparse (f/formatter (t/default-time-zone) "YYYY-MM-dd" "YYYY/MM/dd") %)
+        data (->> coll
+                  read-weibo-hourly-trends
+                  (filter #(= hour (:hour %)))
+                  (sort #(compare (:date %1) (:date %2))))
+        counts (map :count data)
+        mv-av (mv/moving-average window counts)
+        dates (map (comp type-time :date) data)]
+    (map #(assoc {} %1 %2) dates mv-av)))
+
+(moving-average (mc/find-maps "mahangdailycounts") 0 7)
 
 
 
@@ -604,3 +629,4 @@
 
 
 #_(f/show-formatters)
+
