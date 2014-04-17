@@ -4,7 +4,7 @@
 
 (defn average
   [coll]
-  (int (/ (reduce + coll) (count coll))))
+  (double (/ (reduce + coll) (count coll))))
 
 (defn moving-average
   [window coll]
