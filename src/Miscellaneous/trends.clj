@@ -121,8 +121,8 @@
          (concat (vector (reduce conj [nil] (range 24))))
          )))
 
-(moving-average-matrix (mc/find-maps "mahangdailycounts") 7)
+;(moving-average-matrix (mc/find-maps "mahangdailycounts") 7)
 
-(-> (build-workbook (workbook-xssf) {"移动平均" (moving-average-matrix (mc/find-maps "mahangdailycounts") 41)})
-    (save "D:/data/移动平均.xlsx"))
+(-> (build-workbook (workbook-xssf) {"移动平均" (moving-average-matrix (mc/find-maps "mahangdailycounts") 7)})
+    (save "D:/data/mahang/移动平均.xlsx"))
 

@@ -55,6 +55,13 @@
     (->> (correct-nil string)
          (f/parse fmt))))
 
+(defn unparse-date
+  [time]
+  (let [fmt (f/formatter (t/default-time-zone) "yyyy-MM-dd HH:mm:ss" "yyyy-MM-dd HH:mm" "yyyy-MM-dd" "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")]
+    (f/unparse fmt time)))
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;link main;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn get-key
@@ -187,7 +194,7 @@
         preview (:preview entry)
         text (:extracted entry)
         source "baidunews"]
-    {:origin origin :date date :title title :similar similar :keyword kw :preview preview :text text :source source}))
+    {:origin origin :pubdate date :title title :similar similar :keyword kw :preview preview :text text :source source}))
 
 
 
@@ -357,17 +364,17 @@
 
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-#_(def weibo-source {:weibo ["mahang_weibo_content"]})
+(def weibo-source {:weibo ["mahang_weibo_content"]})
 
-#_(write-result weibo-source "mahang_integrate" "mahang_segs")
+(write-result weibo-source "mahang_integrate_weibo" "mahang_segs_weibo")
 
 #_(def weibo-source {:weibo ["weibo_history"]})
 
 #_(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-(def baidunews-source {:baidu-news ["mahang_baidunews_content" "mahang_news_items" :url :cache]})
+;(def baidunews-source {:baidu-news ["mahang_baidunews_content" "mahang_news_items" :url :cache]})
 
-(write-result baidunews-source "mahang_integrate" "mahang_segs")
+;(write-result baidunews-source "mahang_integrate" "mahang_segs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -583,7 +590,13 @@
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
+#_(->> (mc/find-maps "mahang_integrate" {} {:_id 0 :text 0 :source 0})
+     (map #(assoc % :date (unparse-date (:date %))))
+     (#(write-excel % "新闻" "D:/data/mahang/新闻列表.xlsx")))
 
+#_(->> (mc/find-maps "mahang_integrate_weibo" {} {:_id 0 :mid 0 :source 0})
+     (map #(assoc % :pubdate (unparse-date (:pubdate %))))
+     (#(write-excel % "微博" "D:/data/mahang/微博列表.xlsx")))
 
 
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;

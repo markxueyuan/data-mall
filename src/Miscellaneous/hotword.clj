@@ -24,7 +24,7 @@
            org.bson.types.ObjectId)
   (:use clj-excel.core))
 
-(mg/connect!)
+(mg/connect! {:host "192.168.1.184" :port 7017})
 
 (mg/set-db! (mg/get-db "xuetest"))
 
@@ -38,7 +38,7 @@
   (mc/ensure-index collection {:word 1 :nature 1 :date 1})
   (let [day (t/from-time-zone (apply t/date-time day) (t/time-zone-for-offset +8))
         next-day (t/plus (t/from-time-zone day (t/time-zone-for-offset +8)) (t/days 1))
-        results (mc/aggregate collection [{$match {:date {$gte day
+        results (mc/aggregate collection [{$match {:pubdate {$gte day
                                                           $lt next-day}
                                                    :nature nature}}
                                           {$group {:_id {:word "$word"}
@@ -52,7 +52,7 @@
   [collection word nature day]
   (let [previous-day (t/plus (t/from-time-zone day (t/time-zone-for-offset +8)) (t/days -7))
         previous-sum (->> (mc/aggregate collection [{$match {:word word
-                                                            :date {$gte previous-day
+                                                            :pubdate {$gte previous-day
                                                                    $lt day}
                                                             :nature nature}}
                                                    {$group {:_id {:word "$word"}
@@ -66,7 +66,9 @@
       (double (/ previous-sum 7)))))
 
 
-(heavy-words "mahang_segs" "名词" [2014 3 15] 500)
+;(heavy-words "mahang_segs" "名词" [2014 3 15] 500)
+
+;(heavy-words "mahang_segs_weibo" "名词" [2014 3 15] 500)
 ;(previous-average "mahang_segs" "酒店" "名词" (t/from-time-zone (apply t/date-time [2014 3 19]) (t/time-zone-for-offset +8)))
 
 (defn hot-words
@@ -145,7 +147,11 @@ day-range
 
 (->> {"热词" (print-hot-word "mahang_segs" day-range 100)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/.xlsx")))
+     (#(save % "D:/data/baidunewshotword.xlsx")))
+
+(->> {"热词" (print-hot-word "mahang_segs_weibo" day-range 100)}
+     (build-workbook (workbook-xssf))
+     (#(save % "D:/data/mahang/weibohotword.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;
 
