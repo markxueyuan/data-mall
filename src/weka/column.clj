@@ -35,6 +35,8 @@
        (filter #(= (second %) (name attr-name)))
        ffirst))
 
+;(attr-n r/data :SUMLEV)
+
 (defn delete-attrs
   [instances attr-names]
   (reduce (fn [ins na]
