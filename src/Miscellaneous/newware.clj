@@ -90,7 +90,7 @@
         ))))
 
 
-(insert-by-part "xuexuetest" (get-main-text "mahang_baidunews_content" "mahang_news_items" :url :cache))
+;(insert-by-part "xuexuetest" (get-main-text "mahang_baidunews_content" "mahang_news_items" :url :cache))
 
 
 
@@ -159,6 +159,14 @@
 
 ;(insert-by-part "xuetesttianyaextract" (map #(extract-tianya %) (mc/find-maps "xuetesttianya")))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;extract facial expression;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn extract-face
+  [entry]
+  (->> entry
+      :text
+      (re-seq #"\[[^\[\]]+\]")))
+
 (defn extract-weibo
   [entry]
   (let [user (:userName entry)
@@ -174,8 +182,10 @@
         source "weibo"
         original (:origPostUrl entry)
         userid (:userId entry)
-        url (:weiboUrl entry)]
-    {:user user :pubdate date :level level :text text :_id (ObjectId.) :mid mid :keyword kw :source source :origPostUrl original :userId userid :url url}))
+        url (:weiboUrl entry)
+        face (extract-face entry)]
+    {:user user :pubdate date :level level :text text :_id (ObjectId.) :mid mid
+     :keyword kw :source source :origPostUrl original :userId userid :url url :face face}))
 
 
 (defn extract-douban
@@ -248,7 +258,7 @@
 
 ;(insert-by-part "xuetestintegrate" (integrate source))
 
-(insert-by-part "xuexuetest" (integrate {:baidu-news ["mahang_baidunews_content" "mahang_news_items" :url :cache]}))
+;(insert-by-part "xuexuetest" (integrate {:baidu-news ["mahang_baidunews_content" "mahang_news_items" :url :cache]}))
 
 
 
@@ -288,6 +298,16 @@
        (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
 
 ;(insert-by-part "xuetestsegs"(word-seg (mc/find-maps "xuetestentries")))
+
+#_(defn word-seg-utility
+  [collections target-key]
+  (->> collections
+       ;(take 5)
+       (map #(seg/word-seg target-key %))))
+
+;(defn unwind-word-seg)
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;write result;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -364,13 +384,13 @@
 
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-(def weibo-source {:weibo ["mahang_weibo_content"]})
+;(def weibo-source {:weibo ["mahang_weibo_content"]})
 
-(write-result weibo-source "mahang_integrate_weibo" "mahang_segs_weibo")
+;(write-result weibo-source "mahang_integrate_weibo" "mahang_segs_weibo")
 
-#_(def weibo-source {:weibo ["weibo_history"]})
+(def weibo-source {:weibo ["shejian_weibo_history"]})
 
-#_(write-result weibo-source edu-filter "xuetestintegrate" "xuetestsegs")
+(write-result weibo-source "xuetestintegrate" "xuetestsegs")
 
 ;(def baidunews-source {:baidu-news ["mahang_baidunews_content" "mahang_news_items" :url :cache]})
 
@@ -530,7 +550,7 @@
 
 (mg/connect! {:host "192.168.1.184" :port 7017})
 
-(mg/set-db! (mg/get-db "xuetest"))
+(mg/set-db! (mg/get-db "lightdata"))
 
 
 (def locations {:tianya "star_tianya_content"
