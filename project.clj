@@ -33,6 +33,7 @@
                  [org.slf4j/slf4j-simple "1.7.6"]
                  [criterium "0.4.3"]
                  [nz.ac.waikato.cms.weka/weka-dev "3.7.10"]
+                 [calx "0.2.1"]
                  ]
 
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
