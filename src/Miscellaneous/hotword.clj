@@ -26,7 +26,7 @@
 
 (mg/connect! {:host "192.168.1.184" :port 7017})
 
-(mg/set-db! (mg/get-db "xuetest"))
+(mg/set-db! (mg/get-db "lightdata"))
 
 (defn insert-by-part
   [collection data]
@@ -49,8 +49,8 @@
     (reduce #(apply (partial assoc %1) %2) {} pairs)))
 
 (defn previous-average
-  [collection word nature day]
-  (let [previous-day (t/plus (t/from-time-zone day (t/time-zone-for-offset +8)) (t/days -7))
+  [collection word nature day back]
+  (let [previous-day (t/plus (t/from-time-zone day (t/time-zone-for-offset +8)) (t/days (- 0 back)))
         previous-sum (->> (mc/aggregate collection [{$match {:word word
                                                             :pubdate {$gte previous-day
                                                                    $lt day}
@@ -63,7 +63,7 @@
                           :counts)]
     (if (nil? previous-sum)
       0.1
-      (double (/ previous-sum 7)))))
+      (double (/ previous-sum back)))))
 
 
 ;(heavy-words "mahang_segs" "名词" [2014 3 15] 500)
@@ -72,10 +72,10 @@
 ;(previous-average "mahang_segs" "酒店" "名词" (t/from-time-zone (apply t/date-time [2014 3 19]) (t/time-zone-for-offset +8)))
 
 (defn hot-words
-  [collection nature day amounts]
+  [collection nature day amounts back]
   (let [heavy (heavy-words collection nature day amounts)
         day (t/from-time-zone (apply t/date-time day) (t/time-zone-for-offset +8))
-        func #(previous-average collection % nature day)]
+        func #(previous-average collection % nature day back)]
     (->> (reduce #(assoc %1 (key %2) (/ (val %2) (func (key %2)))) {} heavy)
          (sort #(> (val %1) (val %2))))))
 
@@ -84,8 +84,8 @@
 
 
 (defn print-hot-word
-  [collection day-range amounts]
-  (let [f #(->> (hot-words collection %1 %2 amounts)
+  [collection day-range amounts back]
+  (let [f #(->> (hot-words collection %1 %2 amounts back)
                 (take 50)
                 (map first))
         n #(f "名词" %)
@@ -101,57 +101,30 @@
 
 (def day-range
   [
-[2014 	3 	1]
-[2014 	3 	2]
-[2014 	3 	3]
-[2014 	3 	4]
-[2014 	3 	5]
-[2014 	3 	6]
-[2014 	3 	7]
-[2014 	3 	8]
-[2014 	3 	9]
-[2014 	3 	10]
-[2014 	3 	11]
-[2014 	3 	12]
-[2014 	3 	13]
-[2014 	3 	14]
-[2014 	3 	15]
-[2014 	3 	16]
-[2014 	3 	17]
-[2014 	3 	18]
-[2014 	3 	19]
-[2014 	3 	20]
-[2014 	3 	21]
-[2014 	3 	22]
-[2014 	3 	23]
-[2014 	3 	24]
-[2014 	3 	25]
-[2014 	3 	26]
-[2014 	3 	27]
-[2014 	3 	28]
-[2014 	3 	29]
-[2014 	3 	30]
-[2014 	3 	31]
-[2014 	4 	1]
-[2014 	4 	2]
-[2014 	4 	3]
-[2014 	4 	4]
-[2014 	4 	5]
-[2014 	4 	6]
-[2014 	4 	7]
-[2014 	4 	8]
-[2014 	4 	9]
-[2014 	4 	10]])
+[2014 	4 	12]
+[2014 	4 	13]
+[2014 	4 	14]
+[2014 	4 	15]
+[2014 	4 	16]
+[2014 	4 	17]
+[2014 	4 	18]
+[2014 	4 	19]
+[2014 	4 	20]
+[2014 	4 	21]
+[2014 	4 	22]
+[2014 	4 	23]
+[2014 	4 	24]
+   ])
 
 day-range
 
-(->> {"热词" (print-hot-word "mahang_segs" day-range 100)}
+(->> {"热词" (print-hot-word "xuetestsegs" day-range 100 1)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/baidunewshotword.xlsx")))
+     (#(save % "D:/data/shejian/weibohotword.xlsx")))
 
-(->> {"热词" (print-hot-word "mahang_segs_weibo" day-range 100)}
+(->> {"热词" (print-hot-word "news_segs" day-range 100 1)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/mahang/weibohotword.xlsx")))
+     (#(save % "D:/data/shejian/newshotword.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;
 

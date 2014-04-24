@@ -19,6 +19,7 @@
             [clj-time.local :as l]
             [clojure.string :as string]
             [data-mall.moving-average :as mv]
+            [clojure.java.jdbc :as jdbc]
             )
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId)
@@ -273,39 +274,88 @@
 
 ;(unwind {:a 1 :b 2 :word-seg [{:word 4 :nature 5} {:word 6 :nature 7}]})
 
+
+
 (defn word-seg-utility
-  [collections target-key & kws]
-  (->> collections
-       ;(take 5)
-       (map #(seg/word-seg target-key %))
-       (map #(select-keys % (conj kws :word-seg)))
-       (map unwind)
-       (apply concat)
-       (filter #(> (count (:word %)) 1))
-       (map #(syn/han :nature %))
-       ;frequencies
-       ;(map #(assoc (first %) :counts (second %)))
-       ))
-
-;(insert-by-part "word_count" (word-seg-utility (mc/find-maps "xuetest") :text :source :mid))
-
-
-
-(defn word-seg
-  [collection]
-  (->> collection
-       (#(word-seg-utility % :text :source :mid :pubdate :_id :keyword :date))
-       (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
-
-;(insert-by-part "xuetestsegs"(word-seg (mc/find-maps "xuetestentries")))
-
-#_(defn word-seg-utility
   [collections target-key]
   (->> collections
        ;(take 5)
        (map #(seg/word-seg target-key %))))
 
-;(defn unwind-word-seg)
+(defn add-word-seg-seq
+  [collection]
+  (let [func (fn [coll] (->> coll
+                             (map :word)
+                             (filter #(> (count %) 1))))]
+    (map (fn [entry] (update-in entry [:word-seg] func)) collection)))
+
+(defn word-seg-unwind
+  [collection]
+  (->> collection
+       (map #(select-keys % [:word-seg :source :mid :pubdate :_id :keyword :date]))
+       (map unwind)
+       (apply concat)
+       (filter #(> (count (:word %)) 1))
+       (map #(syn/han :nature %))
+       (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;sentiment analysis;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn weibo-facial
+  [entry]
+  (let [pos-set (->> (mmc/find-maps (mg/get-db "config") "weibo_emoticon" {:emctype 1} {:emcname 1 :_id 0})
+                 (map :emcname)
+                 set)
+        neg-set (->> (mmc/find-maps (mg/get-db "config") "weibo_emoticon" {:emctype 0} {:emcname 1 :_id 0})
+                 (map :emcname)
+                 set)
+        pos (remove nil? (map pos-set (:face entry)))
+        neg (remove nil? (map neg-set (:face entry)))]
+    (if (nil? (first pos))
+      (when-not (nil? (first neg))
+        (assoc entry :sentiment "负面" :sent-base (take 5 neg)))
+      (if (nil? (first neg))
+        (assoc entry :sentiment "正面" :sent-base (take 5 pos))
+        (if (> (count neg) (count pos))
+          (assoc entry :sentiment "负面" :sent-base neg)
+          (assoc entry :sentiment "正面" :sent-base pos))))))
+
+
+
+(defn word
+  [entry]
+  (let [pos-set (->> (mmc/find-maps (mg/get-db "config") "weibo_wordlist" {:wordtype 1} {:wordname 1 :_id 0})
+                 (map :wordname)
+                 set)
+        neg-set (->> (mmc/find-maps (mg/get-db "config") "weibo_emoticon" {:wordtype 0} {:wordname 1 :_id 0})
+                 (map :wordname)
+                 set)
+        pos (remove nil? (map pos-set (:word-seg entry)))
+        neg (remove nil? (map neg-set (:word-seg entry)))]
+    (if (nil? (first pos))
+      (when-not (nil? (first neg))
+        (assoc entry :sentiment "负面" :sent-base (take 5 neg)))
+      (if (nil? (first neg))
+        (assoc entry :sentiment "正面" :sent-base (take 5 pos))
+        (if (> (count neg) (count pos))
+          (assoc entry :sentiment "负面" :sent-base neg)
+          (assoc entry :sentiment "正面" :sent-base pos))))))
+
+(defn sentiment
+  [entry]
+  (cond (= (:source entry) "weibo")
+        (cond (weibo-facial entry) (weibo-facial entry)
+              (word entry) (word entry)
+              :else (assoc entry :sentiment "uk"))
+        :else
+        (if (word entry)
+          (word entry)
+          (assoc entry :sentiment "uk"))))
+
+;(sentiment {:face ["[弱]"] :word-seg ["梦想" "时尚" "偶像" "活力"] :source "weibo"})
+
+
+
 
 
 
@@ -314,9 +364,12 @@
 (defn write-result
   [source data-table seg-table]
   (let [col (integrate source)
-        seg (word-seg col)]
-    (future (doall (insert-by-part data-table col)))
-    (doall (insert-by-part seg-table seg))
+        seg (word-seg-utility col :text)
+        sq (add-word-seg-seq seg)
+        emt (map sentiment sq)
+        unwind (word-seg-unwind seg)]
+    (future (doall (insert-by-part data-table emt)))
+    (doall (insert-by-part seg-table unwind))
     ))
 
 (defn filt
@@ -356,15 +409,19 @@
   ([source filters data-table seg-table]
   (let [col (integrate source)
         filt (filters col)
-        seg (word-seg filt)]
-    (future (doall (insert-by-part data-table filt)))
-    (doall (insert-by-part seg-table seg))
+        seg (word-seg-utility filt :text)
+        sq (add-word-seg-seq seg)
+        unwind (word-seg-unwind seg)]
+    (future (doall (insert-by-part data-table sq)))
+    (doall (insert-by-part seg-table unwind))
     ))
   ([source data-table seg-table]
-   (let [col (integrate source)
-        seg (word-seg col)]
-    (future (doall (insert-by-part data-table col)))
-    (doall (insert-by-part seg-table seg))
+  (let [col (integrate source)
+        seg (word-seg-utility col :text)
+        sq (add-word-seg-seq seg)
+        unwind (word-seg-unwind seg)]
+    (future (doall (insert-by-part data-table sq)))
+    (doall (insert-by-part seg-table unwind))
     )))
 
 #_(def edu-filter (partial synonym-filter syn/edu-synonyms))
@@ -372,9 +429,12 @@
 
 ;(write-result source "xuetestintegrate" "xuetestsegs")
 
-#_(def tieba-source {:tieba ["baidu_tieba_main" "baidu_tieba_contents" :url :url]})
+;贴吧
+(def tieba-source {:tieba ["shejian_baidutieba_main" "shejian_baidutieba_content" :url :url]})
 
-#_(write-result tieba-source edu-filter "xuetestintegrate" "xuetestsegs")
+(write-result tieba-source "xuetestintegrate" "xuetestsegs")
+
+;百度-天涯
 
 #_(def baidu-tianya-source {:baidu-tianya ["baidurealtime_tianya" "tianya_content" :encrypedLink :url :p5-on]})
 
@@ -384,17 +444,21 @@
 
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
-;(def weibo-source {:weibo ["mahang_weibo_content"]})
+;天涯
+#_(def tianya-source {:tianya ["shejian_tianya_search" "shejian_tianya_content" :url :url]})
 
-;(write-result weibo-source "mahang_integrate_weibo" "mahang_segs_weibo")
+#_(write-result tianya-source "xuetestintegrate" "xuetestsegs")
 
-(def weibo-source {:weibo ["shejian_weibo_history"]})
+;微博
+#_(def weibo-source {:weibo ["shejian_weibo_history"]})
 
-(write-result weibo-source "xuetestintegrate" "xuetestsegs")
+#_(write-result weibo-source "xuetestintegrate" "xuetestsegs")
 
-;(def baidunews-source {:baidu-news ["mahang_baidunews_content" "mahang_news_items" :url :cache]})
+;百度新闻
 
-;(write-result baidunews-source "mahang_integrate" "mahang_segs")
+(def baidunews-source {:baidu-news ["shejian_baidunews_history_generic" "shejian_baidunews_history" :url :url]})
+
+(write-result baidunews-source "news_integrate" "news_segs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
