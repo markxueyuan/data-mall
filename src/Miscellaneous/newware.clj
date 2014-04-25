@@ -346,11 +346,11 @@
   (cond (= (:source entry) "weibo")
         (cond (weibo-facial entry) (weibo-facial entry)
               (word entry) (word entry)
-              :else (assoc entry :sentiment "uk"))
+              :else (assoc entry :sentiment "uk" :sent-base " "))
         :else
         (if (word entry)
           (word entry)
-          (assoc entry :sentiment "uk"))))
+          (assoc entry :sentiment "uk" :sent-base " "))))
 
 ;(sentiment {:face ["[弱]"] :word-seg ["梦想" "时尚" "偶像" "活力"] :source "weibo"})
 
@@ -407,20 +407,21 @@
 
 (defn write-result
   ([source filters data-table seg-table]
-  (let [col (integrate source)
-        filt (filters col)
-        seg (word-seg-utility filt :text)
-        sq (add-word-seg-seq seg)
-        unwind (word-seg-unwind seg)]
-    (future (doall (insert-by-part data-table sq)))
-    (doall (insert-by-part seg-table unwind))
-    ))
+   (let [col (integrate source)
+         filt (filters col)
+         seg (word-seg-utility filt :text)
+         sq (add-word-seg-seq seg)
+         emt (map sentiment sq)
+         unwind (word-seg-unwind seg)]
+     (future (doall (insert-by-part data-table emt)))
+     (doall (insert-by-part seg-table unwind))))
   ([source data-table seg-table]
-  (let [col (integrate source)
+   (let [col (integrate source)
         seg (word-seg-utility col :text)
         sq (add-word-seg-seq seg)
+        emt (map sentiment sq)
         unwind (word-seg-unwind seg)]
-    (future (doall (insert-by-part data-table sq)))
+    (future (doall (insert-by-part data-table emt)))
     (doall (insert-by-part seg-table unwind))
     )))
 
@@ -430,9 +431,10 @@
 ;(write-result source "xuetestintegrate" "xuetestsegs")
 
 ;贴吧
-(def tieba-source {:tieba ["shejian_baidutieba_main" "shejian_baidutieba_content" :url :url]})
 
-(write-result tieba-source "xuetestintegrate" "xuetestsegs")
+;(def tieba-source {:tieba ["shejian_baidutieba_main" "shejian_baidutieba_content" :url :url]})
+
+;(write-result tieba-source "tiebaintegrate" "tiebasegs")
 
 ;百度-天涯
 
@@ -445,20 +447,20 @@
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;天涯
-#_(def tianya-source {:tianya ["shejian_tianya_search" "shejian_tianya_content" :url :url]})
+(def tianya-source {:tianya ["shejian_tianya_search" "shejian_tianya_content" :url :url]})
 
-#_(write-result tianya-source "xuetestintegrate" "xuetestsegs")
+(write-result tianya-source "tianyaintegrate" "tianyasegs")
 
 ;微博
-#_(def weibo-source {:weibo ["shejian_weibo_history"]})
+(def weibo-source {:weibo ["shejian_weibo_history"]})
 
-#_(write-result weibo-source "xuetestintegrate" "xuetestsegs")
+(write-result weibo-source "weibointegrate" "weibosegs")
 
 ;百度新闻
 
-(def baidunews-source {:baidu-news ["shejian_baidunews_history_generic" "shejian_baidunews_history" :url :url]})
+#_(def baidunews-source {:baidu-news ["shejian_baidunews_history_generic" "shejian_baidunews_history" :url :url]})
 
-(write-result baidunews-source "news_integrate" "news_segs")
+#_(write-result baidunews-source "news_integrate" "news_segs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -674,14 +676,21 @@
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
-#_(->> (mc/find-maps "mahang_integrate" {} {:_id 0 :text 0 :source 0})
-     (map #(assoc % :date (unparse-date (:date %))))
-     (#(write-excel % "新闻" "D:/data/mahang/新闻列表.xlsx")))
-
-#_(->> (mc/find-maps "mahang_integrate_weibo" {} {:_id 0 :mid 0 :source 0})
+#_(->> (mc/find-maps "news_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
+                                        :source 1 :origin 1})
+     (map #(select-keys % [:pubdate :sent-base :sentiment :preview :title :similar :source :keyword :origin]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
-     (#(write-excel % "微博" "D:/data/mahang/微博列表.xlsx")))
+     (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
+     (#(write-excel % "新闻" "D:/data/shejian/新闻列表.xlsx"))
+     )
 
+
+
+#_(->> (mc/find-maps "socialintegrate" {} {:_id 0 :mid 0 :word-seg 0})
+     (map #(select-keys % [:pubdate :url :user :level :sent-base :sentiment :text :title :source :keyword]))
+     (map #(assoc % :pubdate (unparse-date (:pubdate %))))
+     (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
+     (#(write-excel % "social" "D:/data/mahang/social列表.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 

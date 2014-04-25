@@ -35,7 +35,7 @@
 
 (defn heavy-words
   [collection nature day amounts]
-  (mc/ensure-index collection {:word 1 :nature 1 :date 1})
+  (mc/ensure-index collection {:word 1 :nature 1 :pubdate 1})
   (let [day (t/from-time-zone (apply t/date-time day) (t/time-zone-for-offset +8))
         next-day (t/plus (t/from-time-zone day (t/time-zone-for-offset +8)) (t/days 1))
         results (mc/aggregate collection [{$match {:pubdate {$gte day
@@ -114,11 +114,12 @@
 [2014 	4 	22]
 [2014 	4 	23]
 [2014 	4 	24]
+[2014 	4 	25]
    ])
 
 day-range
 
-(->> {"热词" (print-hot-word "xuetestsegs" day-range 100 1)}
+(->> {"热词" (print-hot-word "weibosegs" day-range 100 1)}
      (build-workbook (workbook-xssf))
      (#(save % "D:/data/shejian/weibohotword.xlsx")))
 
