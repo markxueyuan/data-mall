@@ -20,7 +20,7 @@
 
 
 
-(random-seed nil)
+;(random-seed nil)
 
 (defn analysis-parameter
   [parameter]
@@ -65,20 +65,13 @@
                                                   ["-S" seed 1 random-seed]
                                                   ["-A" distance EuclideanDistance .getName]]))
 
-(def km (k-means iris-petal :k 3))
+;(def km (k-means iris-petal :k 3))
 
-km
+;km
 
-(def b (SimpleKMeans.))
-(doto b
-  (.setOptions a)
-  (.buildClusterer iris-petal)
-  (.setPreserveInstancesOrder true))
+;(def testcsv (r/load-csv "D:/data/testkmeans.csv"))
 
-(.getCapabilities b)
-
-
-
+;(k-means testcsv)
 
 ;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;
 
@@ -86,9 +79,18 @@ km
 
 #_(def a (->options "-N" 3 "-I" 100 "-S" 1 "-A" (.getName EuclideanDistance)))
 
-#_S(doto (SimpleKMeans.)
+#_(doto (SimpleKMeans.)
   (.setOptions a)
   (.buildClusterer iris-petal))
+
+#_(def b (SimpleKMeans.))
+
+#_(doto b
+  (.setOptions a)
+  (.buildClusterer iris-petal)
+  (.setPreserveInstancesOrder true))
+
+#_(.getCapabilities b)
 
 ;condp
 (condp some [1 2 3 4]

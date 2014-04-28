@@ -447,14 +447,14 @@
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;天涯
-(def tianya-source {:tianya ["shejian_tianya_search" "shejian_tianya_content" :url :url]})
+#_(def tianya-source {:tianya ["shejian_tianya_search" "shejian_tianya_content" :url :url]})
 
-(write-result tianya-source "tianyaintegrate" "tianyasegs")
+#_(write-result tianya-source "tianyaintegrate" "tianyasegs")
 
 ;微博
-(def weibo-source {:weibo ["shejian_weibo_history"]})
+#_(def weibo-source {:weibo ["shejian_weibo_history"]})
 
-(write-result weibo-source "weibointegrate" "weibosegs")
+#_(write-result weibo-source "weibointegrate" "weibosegs")
 
 ;百度新闻
 
@@ -515,7 +515,7 @@
         ]
     (map fn result))))
 
-;(write-excel (word-list "xuetestsegs") "词频" "E:/data/8个教育品牌口碑词频.xlsx")
+;(write-excel (word-list "news_segs") "词频" "D:/data/shejian/新闻分词.xlsx")
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
