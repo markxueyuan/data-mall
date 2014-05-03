@@ -34,6 +34,7 @@
                  [criterium "0.4.3"]
                  [nz.ac.waikato.cms.weka/weka-dev "3.7.10"]
                  [calx "0.2.1"]
+                 [clj-wordnet "0.1.1-SNAPSHOT"]
                  ]
 
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]}
