@@ -612,6 +612,34 @@
 
 ;(write-excel (drill-down "都敏俊" "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1]) "haha" "D:/data/教授.xlsx")
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;user analysis;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn get-keys
+  [coll]
+  (reduce #(apply conj %1 (keys %2)) #{} coll))
+
+
+(def abcd (mc/find-maps "shejian2_weibo_realtime_detaileduser"))
+
+(doall (get-keys abcd))
+
+(defn accumulator
+  [the-key coll]
+  (let [func (fn [x] (->> x frequencies (clojure.core/sort #(> (val %1) (val %2)))))]
+    (loop [c coll]
+      (if-not (nil? (first c))
+        (if (vector? (first c))
+          (func (mapcat the-key coll))
+          (func (map the-key coll)))
+        (recur (rest coll))))))
+
+(accumulator :性别 abcd)
+
+
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (mg/connect! {:host "192.168.1.184" :port 7017})
