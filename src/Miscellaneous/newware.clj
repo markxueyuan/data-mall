@@ -620,26 +620,50 @@
   (reduce #(apply conj %1 (keys %2)) #{} coll))
 
 
-(def abcd (mc/find-maps "shejian2_weibo_realtime_detaileduser"))
+;(def abcd (mc/find-maps "car_weibo_history_detaileduser"))
 
-(doall (get-keys abcd))
+#_(doall (get-keys abcd))
 
 (defn accumulator
   [the-key coll]
-  (let [func (fn [x] (->> x frequencies (clojure.core/sort #(> (val %1) (val %2)))))]
+  (let [func (fn [x] (->> x frequencies (clojure.core/sort #(> (val %1) (val %2)))))
+        coll2 (->> coll (map #(dissoc % :_systime :_id)) distinct)]
     (loop [c coll]
-      (if-not (nil? (first c))
-        (if (vector? (first c))
-          (func (mapcat the-key coll))
-          (func (map the-key coll)))
-        (recur (rest coll))))))
-
-(accumulator :性别 abcd)
-
+      (when-not (empty? c)
+        (if-not (nil? (get (first c) the-key))
+          (if (vector? (get (first c) the-key))
+            (func (mapcat the-key coll2))
+            (func (map the-key coll2)))
+          (recur (rest c)))))))
 
 
 
+(accumulator :高中 abcd)
 
+(defn age-estimated-utility
+  [entry]
+  (let [regex #(or (re-find #"\(([^\(年\)]+)年\)" %) (re-find #"(\d+)年\d+月\d+日" %))
+        since #(->> (regex %)
+                    second
+                    read-string
+                    (- (t/year (t/today))))
+        edu [:生日 :高中 :中专技校 :初中 :小学 :大学]
+        edu-age {:生日 0 :高中 15 :中专技校 15 :初中 12 :小学 6 :大学 18}
+        birth (get entry :生日)]
+    (loop [a edu]
+      (let [item (get entry (first a))]
+        (when-not (empty? a)
+          (if (and (not (nil? item)) (not (nil? (regex item))))
+            (+ (get edu-age (first a)) (since item))
+            (recur (rest a))))))))
+
+(frequencies (remove nil? (map age-estimated-utility abcd)))
+
+
+
+(re-find #"\(([^\(年\)]+)年\)" "(1985年)春天")
+
+(re-find #"(\d+)年\d+月\d+日" "1985年10月5日")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (mg/connect! {:host "192.168.1.184" :port 7017})
