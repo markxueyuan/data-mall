@@ -622,7 +622,7 @@
 
 ;(def abcd (mc/find-maps "car_weibo_history_detaileduser"))
 
-#_(doall (get-keys abcd))
+;(doall (get-keys abcd))
 
 (defn accumulator
   [the-key coll]
@@ -638,7 +638,7 @@
 
 
 
-(accumulator :高中 abcd)
+;(accumulator :信用等级 abcd)
 
 (defn age-estimated-utility
   [entry]
@@ -647,23 +647,74 @@
                     second
                     read-string
                     (- (t/year (t/today))))
-        edu [:生日 :高中 :中专技校 :初中 :小学 :大学]
+        edu [:高中 :中专技校 :初中 :小学 :大学 :生日]
         edu-age {:生日 0 :高中 15 :中专技校 15 :初中 12 :小学 6 :大学 18}
         birth (get entry :生日)]
     (loop [a edu]
       (let [item (get entry (first a))]
         (when-not (empty? a)
           (if (and (not (nil? item)) (not (nil? (regex item))))
+            (let [age (+ (get edu-age (first a)) (since item))]
+              (if (and (>= age 5) (< age 100))
+                age
+                (recur (rest a))))
             (+ (get edu-age (first a)) (since item))
             (recur (rest a))))))))
 
-(frequencies (remove nil? (map age-estimated-utility abcd)))
+(defn edu-estimated
+  [entry]
+  (let [edu [:大学 :高中 :中专技校 :初中 :小学]]
+    (loop [e edu]
+      (let [item (get entry (first e))]
+        (when-not (empty? e)
+          (if-not (nil? item)
+            (name (first e))
+            (recur (rest e))))))))
+
+(defn active-level
+  [entry]
+  (when (and (not (nil? (:注册时间 entry))) (not (nil? (:活跃天数 entry))))
+    (let [reg (:注册时间 entry)
+          active (:活跃天数 entry)
+          life (t/in-days (t/interval (parse-date reg) (t/now)))]
+      (double (/ active life)))))
+
+(defn extract-user
+  [entry]
+  {:fans_numbers (:粉丝数 entry)
+   :active_score (active-level entry)
+   :credit (:信用等级 entry)
+   :tags (string/join " " (:标签 entry))
+   :city (last (:所在地 entry))
+   :province (first (:所在地 entry))
+   :edu_level_estimated (edu-estimated entry)
+   :age_estimated (age-estimated-utility entry)
+   :gender (:性别 entry)
+   :userName (:昵称 entry)
+   :userId (:userId entry)})
+
+#_(-> (map extract-user abcd)
+    (write-excel "粉丝列表" "D:/data/粉丝列表.xlsx"))
 
 
 
-(re-find #"\(([^\(年\)]+)年\)" "(1985年)春天")
 
-(re-find #"(\d+)年\d+月\d+日" "1985年10月5日")
+;(remove nil? (map edu-estimated megauser))
+
+;(frequencies (remove nil? (map age-estimated-utility abcd)))
+
+(def megauser (mg/with-connection
+               (mg/connect! {:host "192.168.1.184" :port 27017})
+               (mg/with-db (mg/get-db "megausers")
+                           (mc/find-maps "users"))))
+
+
+(count megauser)
+
+;(remove nil? (map age-estimated-utility megauser))
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (mg/connect! {:host "192.168.1.184" :port 7017})
@@ -751,3 +802,10 @@
 
 #_(f/show-formatters)
 
+(re-find #"\(([^\(年\)]+)年\)" "(1985年)春天")
+
+(re-find #"(\d+)年\d+月\d+日" "1985年10月5日")
+
+(re-find #"(\d+)\-(\d+)\-(\d+)" "2012-3-4")
+
+(t/in-days (t/interval (t/date-time 1986 10 2) (t/date-time 1986 10 14)))
