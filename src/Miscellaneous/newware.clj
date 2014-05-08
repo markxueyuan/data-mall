@@ -432,9 +432,9 @@
 
 ;贴吧
 
-;(def tieba-source {:tieba ["shejian_baidutieba_main" "shejian_baidutieba_content" :url :url]})
+#_(def tieba-source {:tieba ["car_baidutieba_main" "car_baidutieba_content" :url :url]})
 
-;(write-result tieba-source "tiebaintegrate" "tiebasegs")
+#_(write-result tieba-source "car_tiebaintegrate" "car_tiebasegs")
 
 ;百度-天涯
 
@@ -447,20 +447,29 @@
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;天涯
-#_(def tianya-source {:tianya ["shejian_tianya_search" "shejian_tianya_content" :url :url]})
+#_(def tianya-source {:tianya ["car_tianya_search" "car_tianya_content" :url :url]})
 
-#_(write-result tianya-source "tianyaintegrate" "tianyasegs")
+#_(write-result tianya-source "car_tianyaintegrate" "car_tianyasegs")
 
 ;微博
-#_(def weibo-source {:weibo ["shejian_weibo_history"]})
+#_(def weibo-source {:weibo ["car_weibo_history"]})
 
-#_(write-result weibo-source "weibointegrate" "weibosegs")
+#_(write-result weibo-source "car_weibointegrate" "car_weibosegs")
 
 ;百度新闻
 
-#_(def baidunews-source {:baidu-news ["shejian_baidunews_history_generic" "shejian_baidunews_history" :url :url]})
+#_(def baidunews-source {:baidu-news ["car_baidunews_history_generic" "car_baidunews_history" :url :url]})
 
-#_(write-result baidunews-source "news_integrate" "news_segs")
+#_(write-result baidunews-source "car_news_integrate" "car_news_segs")
+
+;整合
+
+#_(def integrate-source {:tieba ["car_baidutieba_main" "car_baidutieba_content" :url :url]
+                        :tianya ["car_tianya_search" "car_tianya_content" :url :url]
+                        :weibo ["car_weibo_history"]
+                        })
+
+#_(write-result integrate-source "car_social_integrate" "car_social_segs")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aggregation;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -515,7 +524,7 @@
         ]
     (map fn result))))
 
-;(write-excel (word-list "news_segs") "词频" "D:/data/shejian/新闻分词.xlsx")
+;(write-excel (word-list "car_weibosegs") "词频" "D:/data/car/微博分词.xlsx")
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
@@ -620,7 +629,7 @@
   (reduce #(apply conj %1 (keys %2)) #{} coll))
 
 
-;(def abcd (mc/find-maps "car_weibo_history_detaileduser"))
+(def abcd (mc/find-maps "car_weibo_history_detaileduser"))
 
 ;(doall (get-keys abcd))
 
@@ -658,7 +667,6 @@
               (if (and (>= age 5) (< age 100))
                 age
                 (recur (rest a))))
-            (+ (get edu-age (first a)) (since item))
             (recur (rest a))))))))
 
 (defn edu-estimated
@@ -681,7 +689,7 @@
 
 (defn extract-user
   [entry]
-  {:fans_numbers (:粉丝数 entry)
+  {:fans_numbers (:粉丝 entry)
    :active_score (active-level entry)
    :credit (:信用等级 entry)
    :tags (string/join " " (:标签 entry))
@@ -694,7 +702,7 @@
    :userId (:userId entry)})
 
 #_(-> (map extract-user abcd)
-    (write-excel "粉丝列表" "D:/data/粉丝列表.xlsx"))
+    (write-excel "微博用户信息统计表" "D:/data/car/微博用户信息统计表.xlsx"))
 
 
 
@@ -707,9 +715,6 @@
                (mg/connect! {:host "192.168.1.184" :port 27017})
                (mg/with-db (mg/get-db "megausers")
                            (mc/find-maps "users"))))
-
-
-(count megauser)
 
 ;(remove nil? (map age-estimated-utility megauser))
 
@@ -779,21 +784,21 @@
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
-#_(->> (mc/find-maps "news_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
+#_(->> (mc/find-maps "car_news_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
                                         :source 1 :origin 1})
      (map #(select-keys % [:pubdate :sent-base :sentiment :preview :title :similar :source :keyword :origin]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "新闻" "D:/data/shejian/新闻列表.xlsx"))
+     (#(write-excel % "新闻" "D:/data/car/新闻列表.xlsx"))
      )
 
 
 
-#_(->> (mc/find-maps "socialintegrate" {} {:_id 0 :mid 0 :word-seg 0})
-     (map #(select-keys % [:pubdate :url :user :level :sent-base :sentiment :text :title :source :keyword]))
+#_(->> (mc/find-maps "car_social_integrate" {} {:_id 0 :mid 0 :word-seg 0})
+   (map #(select-keys % [:pubdate :url :user :level :sent-base :sentiment :text :title :source :keyword]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "social" "D:/data/mahang/social列表.xlsx")))
+     (#(write-excel % "social" "D:/data/car/social列表.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 

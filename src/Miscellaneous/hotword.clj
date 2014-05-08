@@ -89,43 +89,50 @@
                 (take 50)
                 (map first))
         n #(f "名词" %)
+        na #(f "人名" %)
+        sn #(f "专有名词" %)
         a #(f "形容词" %)
         v #(f "动词" %)
         s #(string/join %1 %2)]
     (reduce #(conj %1 (vector (s "-" %2)
                               (s " " (n %2))
+                              (s " " (na %2))
+                              (s " " (sn %2))
                               (s " " (a %2))
                               (s " " (v %2))))
-            [["日期" "名词热词" "形容词热词" "动词热词"]]
+            [["日期" "名词热词" "人名热词" "专有名词热词" "形容词热词" "动词热词"]]
          day-range)))
 
-(def day-range
-  [
-[2014 	4 	12]
-[2014 	4 	13]
-[2014 	4 	14]
-[2014 	4 	15]
-[2014 	4 	16]
-[2014 	4 	17]
-[2014 	4 	18]
-[2014 	4 	19]
-[2014 	4 	20]
-[2014 	4 	21]
-[2014 	4 	22]
-[2014 	4 	23]
-[2014 	4 	24]
-[2014 	4 	25]
-   ])
 
-day-range
 
-(->> {"热词" (print-hot-word "weibosegs" day-range 100 1)}
+(defn make-day-range
+  [start end]
+  (let [time-fn #(t/from-time-zone (apply t/date-time %) (t/time-zone-for-offset +8))
+        to-day #(vector (t/year %) (t/month %) (t/day %))
+        start-time (time-fn start)
+        end-time (time-fn end)
+        a (atom [])]
+    (loop [date-time start-time]
+      (if-not (< 0 (compare date-time end-time))
+        (do
+          (swap! a #(conj % (to-day date-time)))
+          (recur (t/plus date-time (t/days 1))))
+        @a))))
+
+
+
+(def car-dayrange
+  (make-day-range [2014 4 8] [2014 5 5]))
+
+
+
+(->> {"热词" (print-hot-word "car_tianyasegs" car-dayrange 100 3)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/shejian/weibohotword.xlsx")))
+     (#(save % "D:/data/car/tianyahotword.xlsx")))
 
-(->> {"热词" (print-hot-word "news_segs" day-range 100 1)}
+(->> {"热词" (print-hot-word "car_news_segs" car-dayrange 100 3)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/shejian/newshotword.xlsx")))
+     (#(save % "D:/data/car/newshotword.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;
 
