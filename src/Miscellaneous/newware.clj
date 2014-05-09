@@ -561,7 +561,7 @@
         func #(assoc % :text (text %))
         date-range {$gte (t/from-time-zone (apply t/date-time start-day) (t/time-zone-for-offset +8))
                     $lte (t/from-time-zone (apply t/date-time end-day) (t/time-zone-for-offset +8))}
-        col (with-collection "xuetestsegs"
+        col (with-collection segs
               (find {:word word :pubdate date-range})
               (sort (array-map :pubdate 1)))]
     (->> (map func col)
@@ -571,8 +571,8 @@
          (map #(assoc % :mid2 (str (:mid2 %))))
          )))
 
-;(drill-down "开心" "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1])
 
+;(drill-down "开心" "car_social_segs" "car_social_integrate" [2014 4 8] [2014 5 5])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;adding category;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -606,6 +606,19 @@
 
 ;(first(rest (synonym "D:/data/星星分词.xlsx" "人物" "名词" "形容词")))
 
+;(synonym "D:/data/car/车展分词更新版.xlsx" "汽车专有名词" "名词" "形容词" "车展人物")
+
+(defn categorize-data
+  [segs entries start-day end-day excel & sheets]
+  (apply (partial add-category
+                  (mapcat #(drill-down % segs entries start-day end-day)
+                           (second (rest (apply synonym excel sheets))))
+                  excel)
+         sheets))
+
+#_(-> (categorize-data "car_social_segs" "car_social_integrate" [2014 4 8] [2014 5 5]
+                 "D:/data/car/车展分词更新版.xlsx" "汽车专有名词" "名词" "形容词" "车展人物")
+    (write-excel "话题分类" "D:/data/car/话题分类.xlsx"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;excel output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -629,7 +642,7 @@
   (reduce #(apply conj %1 (keys %2)) #{} coll))
 
 
-(def abcd (mc/find-maps "car_weibo_history_detaileduser"))
+;(def abcd (mc/find-maps "car_weibo_history_detaileduser"))
 
 ;(doall (get-keys abcd))
 
