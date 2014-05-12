@@ -36,3 +36,5 @@
 
     :else
     (POS/valueOf (str/upper-case (name k)))))
+
+(POS/getPartOfSpeech \n)
