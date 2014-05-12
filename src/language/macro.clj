@@ -120,9 +120,50 @@
        ~@body
        (recur))))
 
+;syntax quote
+(def foo 123)
 
+(list `map `println [foo]);is the same as
 
+`(map println [~foo]);and
 
+`(map println ~[foo])
+
+(list `println (list `keyword (list `str foo)));is the same as
+
+`(println (keyword (str ~foo)))
+
+(let [defs `((def x 123)
+             (def y 456))]
+  (concat (list `do) defs))
+
+(let [defs '((def x 123)
+             (def y 456))]
+  `(do ~@defs))
+;notice that splice unquote implicitly include a concatenate operation
+;the list defs are spliced into the surrounding syntax-quoted list
+
+;a very common idiom
+
+(defmacro foo
+  [& body]
+  `(do-something
+    ~@body))
+
+(macroexpand-1
+ `(foo
+   (doseq [x [1 2 3]]
+     (* x 2))
+   :hehe))
+
+;quote again, so that the returned forms by macro won't be evaluated
+
+;macroexpand is a function, any value of it would be evaluated
+
+;quote, unquote, unquote-splicing are all functions.
+
+;we can see what these 'functions' actually do by quote them to stop the return forms evaluated
+'`(map println ~[foo])
 
 
 
