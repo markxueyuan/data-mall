@@ -1,4 +1,6 @@
-(ns language.macro)
+(ns language.macro
+  (:require (clojure [string :as string]
+                     [walk :as walk])))
 
 (when (= (nth "abc" 1) \b)
   (println "b")
@@ -67,16 +69,59 @@
 (macroexpand-1 '(trymap [1 2 3]))
 
 
+;realize a foreach macro,this basically equals to the function of doseq (but not clojure's for)
+
+(defmacro foreach
+  [[sym coll] & body]
+  `(loop [coll# ~coll]
+     (when-let [[~sym & xs#] (seq coll#)]
+       ~@body
+       (recur xs#))))
 
 
+;a macro reverses all the symbols in the form
+
+(defmacro reverse-it
+  [form]
+  (walk/postwalk #(if (symbol? %)
+                    (symbol (string/reverse (name %)))
+                    %)
+                 form))
+
+(macroexpand-1 '(reverse-it (pam cni (egnar 5))))
 
 
+;we'd like macro returns list to represent futher calls of functions, forms or macros.
+
+(defmacro hello
+  [name]
+  (list 'println name))
+
+(macroexpand-1 '(hello "Brian"))
+
+;whereas using list is a natural way, It would be out of control when codes become complicated
+
+;as the following one
+(defmacro while
+  [test & body]
+  (list 'loop []
+        (concat (list 'when test) body '((recur)))))
+
+(def a (atom 10))
+
+(while (> @a 3) (do (println @a) (swap! a dec)))
+
+;we use this syntax sugar
+
+(defmacro while
+  [test & body]
+  `(loop []
+     (when ~test
+       ~@body
+       (recur))))
 
 
-
-
-
-
+(quote (a b))
 
 
 
