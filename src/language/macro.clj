@@ -162,21 +162,155 @@
 
 ;quote, unquote, unquote-splicing are all functions.
 
-;we can see what these 'functions' actually do by quote them to stop the return forms evaluated
+;we can see what these 'functions' actually do by quoting them to stop the return forms evaluated
 '`(map println ~[foo])
 
+;you cannot let a qualified x
+
+(defmacro incorrect-let
+  [& body]
+  `(let [x 3]
+     ~@body))
+
+;(incorrect-let (println ":x" x));cannot be evaluated for you cannot let qualified name.
+
+;we would take some clever roundabout ways to solve this problem
+
+(defmacro unhygiene-let
+  [& body]
+  `(let [~'x 3]
+     ~@body))
+
+;however, this has a macro hygiene problem
+
+(let [x 4]
+  (unhygiene-let (println ":x" x)))
+
+;here is the problem, the code calls macro does not know the macro returns form bingding x to another value
+
+
+(macroexpand-1 '(unhygiene-let (println ":x" x)))
+
+
+(defmacro hello
+  [a]
+  `(let [~'x 3]
+     (concat [x] [~a])))
+
+(unhygiene-let (println "x:" x))
+
+(eval `(let [~'x 3] ~'(println "x:" x)))
+
+(defmacro abc
+  [x]
+  (println (name x)))
+
+(symbol? (gensym))
+
+(gensym "hahaha")
+
+
+(defmacro hygienic
+  [& body]
+  (let [sym (gensym)]
+    `(let [~sym :macro-value]
+       ~@body
+       ~sym)))
+
+(let [x :important]
+  (hygienic (println "x:" x)))
+
+;this makes macro safe, we can use auto-gensym to make it more simple
+
+(defmacro hygeienic
+  [& body]
+  `(let [x# :macro-value]
+     ~@body
+     x#))
+
+(let [x :important]
+ (hygeienic (println "x:" x)))
+
+;auto-gensym under same syntax quote expand to same actual symbol
+
+(defmacro auto-gensyms
+  [& numbers]
+  `(let [x# (rand-int 10)]
+     (+ x# ~@numbers)))
+
+(auto-gensyms 1 2 3 4)
+
+(macroexpand-1 `(auto-gensyms 1 2 3 4))
+
+;however, to unify gensyms in multiple syntax quote, we go back to use (gensym)
+
+(defmacro our-doto
+  [expr & forms]
+  (let [obj (gensym "obj")]
+    `(let [~obj ~expr]
+     ~@(map (fn [[f & args]]
+              (list* f obj args))
+            forms)
+     ~obj)))
+
+(our-doto "It works"
+   (println "hahahah")
+   (println "wagagaga"))
+
+;user picked names
+
+(defmacro with
+  [name & body]
+  `(let [~name 5]
+     ~@body))
+
+(with kala (+ kala 10))
+(with yukun (+ yukun 250))
+
+;double evaluation problem
+
+(defmacro spy
+  [x]
+  `(do
+     (println "spied" '~x ~x)
+     ~x))
 
 
 
+(spy 3);this is ok
+(spy (rand-int 10));this is terrible
+
+(macroexpand-1 '(spy (rand-int 10)))
+
+; to solve this, include a gensym all the time when argument appears more than once
+
+(defmacro spy
+  [x]
+  `(let [x# ~x]
+     (println "spied" '~x x#)
+     x#))
+
+(macroexpand-1 '(spy (rand-int 10)))
+
+(spy (rand-int 10))
+
+;double evaluation may hint that your macro done jobs that can be extracted into a function
 
 
+(defn spy-helper
+  [expr value]
+  (println "spied" expr value))
+
+(defmacro spy
+  [x]
+  `(spy-helper '~x ~x))
+
+(spy (rand-int 10))
 
 
+;;;;;;;;;;;tips;;;;;;;;;;;;
 
-
-
-
-
-
+(list* 1 2 [4 5])
+(list 1 2 [4 5])
 
 
