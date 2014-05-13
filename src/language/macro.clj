@@ -299,7 +299,8 @@
 
 (defn spy-helper
   [expr value]
-  (println "spied" expr value))
+  (println "spied" expr value)
+  value)
 
 (defmacro spy
   [x]
@@ -307,10 +308,52 @@
 
 (spy (rand-int 10))
 
+;&env
 
+(defmacro spy-env []
+  (let [ks (keys &env)]
+    `(prn (zipmap '~ks [~@ks]))))
+
+(let [x 1 y 2]
+  (spy-env)
+  (+ x y))
+
+(defmacro spy-env []
+  (let [ks (keys &env)]
+    `(zipmap '~ks [~@ks])));hahahah, I truly undersand this! I am the king of the world!!!!!
+
+(let [x 1 y 2]
+  (spy-env))
+
+
+(defmacro simplify
+  [expr]
+  (let [locals (set (keys &env))]
+    (if (some locals (flatten expr))
+      expr
+      (do
+        (println "Precomputing: " expr)
+        (list `quote (eval expr))))))
+
+
+(defn f
+  [a b c]
+  (+ a b c (simplify (apply + (range 5e7)))))
+
+(f 1 2 3)
+
+;reach a macro's corresponding function via reference to the var
+
+(@#'simplify nil {} '(inc 1))
+
+(deref (var simplify));useful for obtaining value of a private var
+
+(@#'simplify nil {'x 1} '(inc x))
 ;;;;;;;;;;;tips;;;;;;;;;;;;
 
 (list* 1 2 [4 5])
 (list 1 2 [4 5])
 
+(+ 1 2 '3)
 
+(quote (+ 1 2))
