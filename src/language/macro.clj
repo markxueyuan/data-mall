@@ -350,6 +350,12 @@
 
 (@#'simplify nil {'x 1} '(inc x))
 
+(defmacro image
+  [expr]
+  expr)
+
+(image (range 10))
+
 
 (defmacro ontology
   [& triples]
@@ -372,14 +378,63 @@
                                (-> &form meta :line)))))
           triples))
 
-(ontology [1 2])
+;(ontology [1 2])
 
-(defmacro xyz
-  []
-    `(prn ~@(meta &form)))
+(defn macroexpand-1-env
+  [env form]
+  (if-let [[x & xs] (and (seq? form) (seq form))]
+    (if-let [v (and (symbol? x) (resolve x))]
+      (if (-> v meta :macro)
+        (apply @v form env xs)
+        form)
+      form)
+    form))
 
-(let [u 5]
-  (xyz))
+(defmacro spy
+  [expr]
+  `(let [value# ~expr]
+     (println (str "line #:" ~(-> &form meta :line) ";"))
+     value#
+     ))
+
+(let [a 1
+      a (spy (inc a))
+      a (spy (inc a))]
+  a)
+
+(macroexpand-1-env '{range 1} '(simplify (range 10)))
+
+((deref (resolve 'simplify)) nil '{range 1} '(range 10))
+(defmacro aby
+  [x]
+  (+ x 2))
+(simplify  (range 10))
+
+(defmacro abd
+  [body]
+  `(+ 2 ~@body)
+  `(symbol? ~@body))
+
+(defmacro abe
+  [exp]
+  (symbol? exp))
+
+(abd (1))
+
+(abe a)
+
+(@#'aby 1)
+
+
+
+('+ '1 '2)
+(+ '1 '2)
+
+(@#'aby nil nil '2)
+
+helloha
+
+(seq? (quote #(+ 2 %)))
 
 ;;;;;;;;;;;tips;;;;;;;;;;;;
 
