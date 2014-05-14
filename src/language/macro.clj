@@ -349,6 +349,38 @@
 (deref (var simplify));useful for obtaining value of a private var
 
 (@#'simplify nil {'x 1} '(inc x))
+
+
+(defmacro ontology
+  [& triples]
+  (every? #(or (== 3 (count %))
+               (throw (IllegalArgumentException.
+                       "All triples provided as arguments must have 3 elements")))
+          triples))
+
+(ontology [1 2 3])
+
+;(ontology [1 2 3] [1 2])
+
+(defmacro ontology
+  [& triples]
+  (every? #(or (== 3 (count %))
+               (throw (IllegalArgumentException.
+                       (format "'%s' provided to '%s' on line %s has < 3 elements"
+                               %
+                               (first &form)
+                               (-> &form meta :line)))))
+          triples))
+
+(ontology [1 2])
+
+(defmacro xyz
+  []
+    `(prn ~@(meta &form)))
+
+(let [u 5]
+  (xyz))
+
 ;;;;;;;;;;;tips;;;;;;;;;;;;
 
 (list* 1 2 [4 5])

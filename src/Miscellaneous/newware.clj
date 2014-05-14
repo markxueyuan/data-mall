@@ -724,10 +724,21 @@
 
 ;(frequencies (remove nil? (map age-estimated-utility abcd)))
 
-(def megauser (mg/with-connection
+#_(def megauser (mg/with-connection
                (mg/connect! {:host "192.168.1.184" :port 27017})
                (mg/with-db (mg/get-db "megausers")
                            (mc/find-maps "users"))))
+
+(def connection-2
+  (mg/connect {:host "192.168.1.184" :port 27017}))
+
+(def db-2 (mg/get-db connection-2 "megausers"))
+
+(def megauser (mmc/find-maps db-2 "users"))
+
+#_(-> (map extract-user megauser)
+    (write-excel "微博用户信息统计表" "D:/data/car/微博用户信息统计表.xlsx"))
+
 
 ;(remove nil? (map age-estimated-utility megauser))
 
