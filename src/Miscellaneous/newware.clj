@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [sort find])
   (:require [clojure.string :as string]
             [incanter.core :as incanter]
-            [data-mall.connectDB3 :as db]
+            ;[data-mall.connectDB3 :as db]
             [clojure.java.jdbc :as jdbc]
             [monger.core :as mg];the following 4 is for mongo use
             [monger.collection :as mc]
@@ -20,6 +20,8 @@
             [clojure.string :as string]
             [data-mall.moving-average :as mv]
             [clojure.java.jdbc :as jdbc]
+            [clojure.java.io :as io]
+            [clojure.data.csv :as csv]
             )
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId)
@@ -620,7 +622,7 @@
                  "D:/data/car/车展分词更新版.xlsx" "汽车专有名词" "名词" "形容词" "车展人物")
     (write-excel "话题分类" "D:/data/car/话题分类.xlsx"))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;excel output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn write-excel
   [collection sheet file]
@@ -634,6 +636,17 @@
 
 ;(write-excel (drill-down "都敏俊" "xuetestsegs" "xuetestentries" [2013 12 1] [2014 3 1]) "haha" "D:/data/教授.xlsx")
 
+
+(defn write-csv
+  [coll file]
+  (let [keys-vec (keys (first coll))
+        vals-vecs (map (apply juxt keys-vec) coll)]
+    (with-open [out (io/writer file)]
+      (csv/write-csv out (vector (map name keys-vec)))
+      (doseq [v vals-vecs]
+        (csv/write-csv out (vector v))))))
+
+;(write-csv [{:a 2 :b 3} {:a 4 :b 5}] "D:/data/test_write_csv.csv")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;user analysis;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -682,6 +695,8 @@
                 (recur (rest a))))
             (recur (rest a))))))))
 
+;(remove nil? (map age-estimated-utility megauser))
+
 (defn edu-estimated
   [entry]
   (let [edu [:大学 :高中 :中专技校 :初中 :小学]]
@@ -714,35 +729,14 @@
    :userName (:昵称 entry)
    :userId (:userId entry)})
 
-#_(-> (map extract-user abcd)
-    (write-excel "微博用户信息统计表" "D:/data/car/微博用户信息统计表.xlsx"))
-
-
-
-
-;(remove nil? (map edu-estimated megauser))
-
-;(frequencies (remove nil? (map age-estimated-utility abcd)))
-
-#_(def megauser (mg/with-connection
-               (mg/connect! {:host "192.168.1.184" :port 27017})
-               (mg/with-db (mg/get-db "megausers")
-                           (mc/find-maps "users"))))
-
 (def connection-2
   (mg/connect {:host "192.168.1.184" :port 27017}))
 
 (def db-2 (mg/get-db connection-2 "megausers"))
 
-(def megauser (mmc/find-maps db-2 "users"))
+(defn megauser [] (mmc/find-maps db-2 "users"))
 
-#_(-> (map extract-user megauser)
-    (write-excel "微博用户信息统计表" "D:/data/car/微博用户信息统计表.xlsx"))
-
-
-;(remove nil? (map age-estimated-utility megauser))
-
-
+;(write-csv (map extract-user (megauser)) "D:/data/fucked2.csv")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

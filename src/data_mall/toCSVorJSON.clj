@@ -61,7 +61,7 @@
 
 ;fn juxt takes a set of functions and juxtpose them together to call for same value
 
-;((juxt :a :b :c) {:a 2 :b 3})
+((juxt :a :b :c) {:a 2 :b 3})
 
 
 
