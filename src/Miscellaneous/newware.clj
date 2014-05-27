@@ -13,6 +13,7 @@
             [data-mall.ansj-seg :as seg]
             [data-mall.synonym :as syn]
             [data-mall.pivot-table :as pt]
+            [data-mall.sampling :as sampling]
             [clj-time.core :as t]
             [clj-time.format :as f]
             [clj-time.coerce :as joda]
@@ -37,7 +38,6 @@
   [collection data]
   (let [parts (partition-all 500 data)]
     (map #(mc/insert-batch collection %) parts)))
-
 
 
 ;(mg/connect! {:host "192.168.1.184" :port 7017})
@@ -122,13 +122,17 @@
         ftext #(:text %)
         fmap #(assoc {} :user (fuser %) :pubdate (fdate %) :level level :text (ftext %))
         minimaps (map fmap mini)
-        mlevel (if (> (:floor (:content entry)) 1) 2 1)
-        majormap {:user (:name (:author entry)) :pubdate (parse-date (:postTime entry)) :level mlevel :text (:text entry)}
+        mlevel (if (> (read-string (:floor entry)) 1) 2 1)
+        majormap {:user (:user_name (:author entry)) :pubdate (parse-date (:postTime entry)) :level mlevel :text (:text entry)}
         allmaps (conj minimaps majormap)
         idmaps (map #(assoc % :_id (ObjectId.) :mid (:_id entry) :keyword (:keyword entry) :source "tieba" :title (:title entry) :url (:url entry))
                     allmaps)]
     idmaps
     ))
+
+(defn extract-baidu-tieba
+  [entry]
+  (map #(assoc % :p5 (:p5 entry)) (extract-tieba entry)))
 
 ;(insert-by-part "xuetesttiebaextract"(apply concat (map #(extract-tieba %) (mc/find-maps "xuetesttieba"))))
 
@@ -241,12 +245,13 @@
         (= source-key :douban) (apply (partial prepare-data extract-douban) source-docs)
         (= source-key :youku) (apply (partial prepare-data extract-youku) source-docs)
         (= source-key :baidu-tianya) (apply (partial prepare-data extract-baidu-tianya) source-docs)
-        (= source-key :baidu-news) (apply prepare-baidunews source-docs)))
+        (= source-key :baidu-news) (apply prepare-baidunews source-docs)
+        (= source-key :baidu-tieba) (apply concat (apply (partial prepare-data extract-baidu-tieba) source-docs))))
 
 
 (defn integrate
   [{:as source}]
-  (let [m [:tianya :tieba :weibo :douban :youku :baidu-tianya :baidu-news]
+  (let [m [:tianya :tieba :weibo :douban :youku :baidu-tianya :baidu-news :baidu-tieba]
         s (set (keys source))
         job (filter s m)]
     (mapcat #(utility % (get source %)) job)))
@@ -262,8 +267,6 @@
 ;(insert-by-part "xuetestintegrate" (integrate source))
 
 ;(insert-by-part "xuexuetest" (integrate {:baidu-news ["mahang_baidunews_content" "mahang_news_items" :url :cache]}))
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;word-seg;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -363,17 +366,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;write result;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn write-result
-  [source data-table seg-table]
-  (let [col (integrate source)
-        seg (word-seg-utility col :text)
-        sq (add-word-seg-seq seg)
-        emt (map sentiment sq)
-        unwind (word-seg-unwind seg)]
-    (future (doall (insert-by-part data-table emt)))
-    (doall (insert-by-part seg-table unwind))
-    ))
-
 (defn filt
   [& fns]
   (apply comp fns))
@@ -434,9 +426,15 @@
 
 ;贴吧
 
-#_(def tieba-source {:tieba ["car_baidutieba_main" "car_baidutieba_content" :url :url]})
+;(def tieba-source {:tieba ["game_baidu_realtime" "game_test3" :encrypedLink :url]})
 
-#_(write-result tieba-source "car_tiebaintegrate" "car_tiebasegs")
+;(write-result tieba-source "game_baidutieba_integrate" "game_baidutieba_segs")
+
+;百度-贴吧
+
+#_(def baidu-tieba-source {:baidu-tieba ["game_baidu_realtime" "game_baidutieba_content" :encrypedLink :url :p5-on]})
+
+#_(write-result baidu-tieba-source "game_tiebaintegrate" "game_tiebasegs")
 
 ;百度-天涯
 
@@ -449,20 +447,20 @@
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;天涯
-#_(def tianya-source {:tianya ["car_tianya_search" "car_tianya_content" :url :url]})
+;(def tianya-source {:tianya ["game_tianya_search" "game_tianya_content" :url :url]})
 
-#_(write-result tianya-source "car_tianyaintegrate" "car_tianyasegs")
+;(write-result tianya-source "game_tianya_integrate" "game_tianya_segs")
 
 ;微博
-#_(def weibo-source {:weibo ["car_weibo_history"]})
+;(def weibo-source {:weibo ["game_weibo_history_real"]})
 
-#_(write-result weibo-source "car_weibointegrate" "car_weibosegs")
+;(write-result weibo-source "game_weibo_integrate" "game_weibo_segs")
 
 ;百度新闻
 
-#_(def baidunews-source {:baidu-news ["car_baidunews_history_generic" "car_baidunews_history" :url :url]})
+;(def baidunews-source {:baidu-news ["game_baidunews_history_generic" "game_baidunews_history" :url :url]})
 
-#_(write-result baidunews-source "car_news_integrate" "car_news_segs")
+;(write-result baidunews-source "game_baidunews_integrate" "game_baidunews_segs")
 
 ;整合
 
@@ -526,7 +524,7 @@
         ]
     (map fn result))))
 
-;(write-excel (word-list "car_weibosegs") "词频" "D:/data/car/微博分词.xlsx")
+;(write-excel (word-list "game_tianya_segs") "词频" "D:/data/game/天涯分词.xlsx")
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
@@ -567,8 +565,8 @@
               (find {:word word :pubdate date-range})
               (sort (array-map :pubdate 1)))]
     (->> (map func col)
-         (map #(select-keys % [:source :text :pubdate :word :mid2]))
-         distinct
+         (map #(select-keys % [:source :text :pubdate :word :mid2 :keyword]))
+         ;distinct
          (map #(assoc % :pubdate (l/format-local-time (:pubdate %) :date)))
          (map #(assoc % :mid2 (str (:mid2 %))))
          )))
@@ -608,7 +606,7 @@
 
 ;(first(rest (synonym "D:/data/星星分词.xlsx" "人物" "名词" "形容词")))
 
-;(synonym "D:/data/car/车展分词更新版.xlsx" "汽车专有名词" "名词" "形容词" "车展人物")
+;(synonym "D:/data/game/游戏分词2.xlsx" "游戏关键词" "道具" "游戏技巧")
 
 (defn categorize-data
   [segs entries start-day end-day excel & sheets]
@@ -618,9 +616,9 @@
                   excel)
          sheets))
 
-#_(-> (categorize-data "car_social_segs" "car_social_integrate" [2014 4 8] [2014 5 5]
-                 "D:/data/car/车展分词更新版.xlsx" "汽车专有名词" "名词" "形容词" "车展人物")
-    (write-excel "话题分类" "D:/data/car/话题分类.xlsx"))
+(-> (categorize-data "game_baidutieba_segs" "game_social_integrate" [2014 4 1] [2014 4 30]
+                 "D:/data/game/游戏分词2.xlsx" "游戏关键词" "道具" "游戏技巧" "游戏人物")
+    (write-excel "话题分类" "D:/data/game/话题分类.xlsx"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -736,6 +734,10 @@
 
 (defn megauser [] (mmc/find-maps db-2 "users"))
 
+;(defn gameuser [] (mc/find-maps "game_weibo_user"))
+
+;(write-excel (map extract-user (gameuser)) "微博用户信息" "D:/data/game/微博用户信息.xlsx")
+
 ;(write-csv (map extract-user (megauser)) "D:/data/fucked2.csv")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -802,21 +804,31 @@
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
-#_(->> (mc/find-maps "car_news_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
+#_(->> (mc/find-maps "game_baidunews_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
                                         :source 1 :origin 1})
      (map #(select-keys % [:pubdate :sent-base :sentiment :preview :title :similar :source :keyword :origin]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "新闻" "D:/data/car/新闻列表.xlsx"))
+     (#(write-excel % "新闻" "D:/data/game/新闻列表.xlsx"))
      )
 
+;(insert-by-part "game_baidutieba_sample" (sampling/sample-percent 0.1 (mc/find "game_baidutieba_integrate")))
 
+;(insert-by-part "game_baidutieba_segs" (mc/find-maps "game_tianya_segs"))
 
-#_(->> (mc/find-maps "car_social_integrate" {} {:_id 0 :mid 0 :word-seg 0})
+#_(->> (mc/find-maps "game_baidutieba_sample" {} {:_id 0 :mid 0 :word-seg 0})
    (map #(select-keys % [:pubdate :url :user :level :sent-base :sentiment :text :title :source :keyword]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "social" "D:/data/car/social列表.xlsx")))
+     (#(write-excel % "social" "D:/data/game/tieba列表.xlsx")))
+
+
+#_(insert-by-part "game_test3"
+                (with-collection "game_baidutieba_content"
+  (find {})
+  (skip 200000)
+  (limit 200000)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;
 

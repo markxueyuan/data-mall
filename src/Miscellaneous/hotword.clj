@@ -121,18 +121,20 @@
 
 
 
-(def car-dayrange
+#_(def car-dayrange
   (make-day-range [2014 4 8] [2014 5 5]))
 
+(def game-dayrange
+  (make-day-range [2014 4 1] [2014 4 30]))
 
 
-(->> {"热词" (print-hot-word "car_tianyasegs" car-dayrange 100 3)}
+#_(->> {"热词" (print-hot-word "game_weibo_segs" game-dayrange 100 3)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/car/tianyahotword.xlsx")))
+     (#(save % "D:/data/game/weibohotword.xlsx")))
 
-(->> {"热词" (print-hot-word "car_news_segs" car-dayrange 100 3)}
+(->> {"热词" (print-hot-word "game_baidunews_segs" game-dayrange 100 3)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/car/newshotword.xlsx")))
+     (#(save % "D:/data/game/newshotword.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;
 
