@@ -2,6 +2,7 @@
 
 
 (require '[clojure.string :as string])
+(import java.util.regex.Pattern)
 
 (def phone-regex
   #"(?x)
@@ -51,3 +52,5 @@
 
 
 (re-seq brackets "我们仍是有希望的吗[呵呵]这可咋整[哈哈]也许是吧")
+
+(Pattern/compile "a|b")

@@ -23,6 +23,7 @@
             [clojure.java.jdbc :as jdbc]
             [clojure.java.io :as io]
             [clojure.data.csv :as csv]
+            [clojure-csv.core :as clj-csv]
             )
   (:import [com.mongodb MongoOptions ServerAddress WriteConcern];the following two is for mongo use
            org.bson.types.ObjectId)
@@ -122,8 +123,8 @@
         ftext #(:text %)
         fmap #(assoc {} :user (fuser %) :pubdate (fdate %) :level level :text (ftext %))
         minimaps (map fmap mini)
-        mlevel (if (> (read-string (:floor entry)) 1) 2 1)
-        majormap {:user (:user_name (:author entry)) :pubdate (parse-date (:postTime entry)) :level mlevel :text (:text entry)}
+        mlevel (if (>  (:post_no (:content entry)) 1) 2 1)
+        majormap {:user (:user_name (:author entry)) :pubdate (parse-date (:date (:content entry))) :level mlevel :text (:text entry)}
         allmaps (conj minimaps majormap)
         idmaps (map #(assoc % :_id (ObjectId.) :mid (:_id entry) :keyword (:keyword entry) :source "tieba" :title (:title entry) :url (:url entry))
                     allmaps)]
@@ -209,7 +210,10 @@
         similar (:similar_count entry)
         kw ((comp :keyword :opts) entry)
         preview (:preview entry)
-        text (:extracted entry)
+        text (let [t (:extracted entry)]
+               (if (or (nil? t) (#(= % "") t))
+                 preview
+                 t))
         source "baidunews"]
     {:origin origin :pubdate date :title title :similar similar :keyword kw :preview preview :text text :source source}))
 
@@ -322,8 +326,8 @@
       (if (nil? (first neg))
         (assoc entry :sentiment "正面" :sent-base (take 5 pos))
         (if (> (count neg) (count pos))
-          (assoc entry :sentiment "负面" :sent-base neg)
-          (assoc entry :sentiment "正面" :sent-base pos))))))
+          (assoc entry :sentiment "负面" :sent-base (take 5 neg))
+          (assoc entry :sentiment "正面" :sent-base (take 5 pos)))))))
 
 
 
@@ -332,7 +336,7 @@
   (let [pos-set (->> (mmc/find-maps (mg/get-db "config") "weibo_wordlist" {:wordtype 1} {:wordname 1 :_id 0})
                  (map :wordname)
                  set)
-        neg-set (->> (mmc/find-maps (mg/get-db "config") "weibo_emoticon" {:wordtype 0} {:wordname 1 :_id 0})
+        neg-set (->> (mmc/find-maps (mg/get-db "config") "weibo_wordlist" {:wordtype 0} {:wordname 1 :_id 0})
                  (map :wordname)
                  set)
         pos (remove nil? (map pos-set (:word-seg entry)))
@@ -343,8 +347,8 @@
       (if (nil? (first neg))
         (assoc entry :sentiment "正面" :sent-base (take 5 pos))
         (if (> (count neg) (count pos))
-          (assoc entry :sentiment "负面" :sent-base neg)
-          (assoc entry :sentiment "正面" :sent-base pos))))))
+          (assoc entry :sentiment "负面" :sent-base (take 5 neg))
+          (assoc entry :sentiment "正面" :sent-base (take 5 pos)))))))
 
 (defn sentiment
   [entry]
@@ -358,8 +362,6 @@
           (assoc entry :sentiment "uk" :sent-base " "))))
 
 ;(sentiment {:face ["[弱]"] :word-seg ["梦想" "时尚" "偶像" "活力"] :source "weibo"})
-
-
 
 
 
@@ -426,15 +428,15 @@
 
 ;贴吧
 
-;(def tieba-source {:tieba ["game_baidu_realtime" "game_test3" :encrypedLink :url]})
+;(def tieba-source {:tieba ["world_cup_tieba_baidu_meta" "world_cup_tieba_content_10p" :encrypedLink :url]})
 
-;(write-result tieba-source "game_baidutieba_integrate" "game_baidutieba_segs")
+;(write-result tieba-source "world_cup_tieba_integrate" "world_cup_tieba_segs")
 
 ;百度-贴吧
 
-#_(def baidu-tieba-source {:baidu-tieba ["game_baidu_realtime" "game_baidutieba_content" :encrypedLink :url :p5-on]})
+;(def baidu-tieba-source {:baidu-tieba ["game_baidu_realtime" "game_baidutieba_content" :encrypedLink :url :p5-on]})
 
-#_(write-result baidu-tieba-source "game_tiebaintegrate" "game_tiebasegs")
+;(write-result baidu-tieba-source "game_tiebaintegrate" "game_tiebasegs")
 
 ;百度-天涯
 
@@ -447,20 +449,20 @@
 #_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;天涯
-;(def tianya-source {:tianya ["game_tianya_search" "game_tianya_content" :url :url]})
+;(def tianya-source {:tianya ["world_cup_tianya_baidu_meta" "world_cup_tianya_content_10p" :encrypedLink :url]})
 
-;(write-result tianya-source "game_tianya_integrate" "game_tianya_segs")
+;(write-result tianya-source "world_cup_tianya_integrate" "world_cup_tianya_segs")
 
 ;微博
-;(def weibo-source {:weibo ["game_weibo_history_real"]})
+;(def weibo-source {:weibo ["world_cup_weibo_his"]})
 
-;(write-result weibo-source "game_weibo_integrate" "game_weibo_segs")
+;(write-result weibo-source "world_cup_weibo_integrate" "world_cup_weibo_segs")
 
 ;百度新闻
 
-;(def baidunews-source {:baidu-news ["game_baidunews_history_generic" "game_baidunews_history" :url :url]})
+;(def baidunews-source {:baidu-news ["xinjiang_baidunews_history_generic" "xinjiang_baidunews_history" :url :url]})
 
-;(write-result baidunews-source "game_baidunews_integrate" "game_baidunews_segs")
+;(write-result baidunews-source "xinjiang_baidunews_integrate" "xinjiang_baidunews_segs")
 
 ;整合
 
@@ -524,11 +526,20 @@
         ]
     (map fn result))))
 
-;(write-excel (word-list "game_tianya_segs") "词频" "D:/data/game/天涯分词.xlsx")
+(defn lazy-word-list
+  [collection]
+  (pt/lazy-pivot-table [:keyword :word :nature]
+                       [:count] [count]
+                       (mc/find-maps collection
+                                     {} {:_id 0 :keyword 1 :word 1 :nature 1})))
+
+;(write-excel (word-list "xinjiang_baidunews_segs") "词频" "D:/data/xinjiang/news分词.xlsx")
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
-;(mc/find-maps "xuetestsegs")
+;(write-csv-quoted (word-list "world_cup_tianya_segs") "D:/data/world_cup/tianya分词.csv")
+
+;(write-csv-quoted (lazy-word-list "world_cup_tianya_segs") "D:/data/world_cup/tianya分词.csv")
 
 ;(write-excel (word-date-distribution "xuetestsegs" [1970 1 1] [2014 4 4]) "词频时间分布" "E:/data/词频时间分布.xlsx")
 
@@ -616,9 +627,9 @@
                   excel)
          sheets))
 
-(-> (categorize-data "game_baidutieba_segs" "game_social_integrate" [2014 4 1] [2014 4 30]
-                 "D:/data/game/游戏分词2.xlsx" "游戏关键词" "道具" "游戏技巧" "游戏人物")
-    (write-excel "话题分类" "D:/data/game/话题分类.xlsx"))
+#_(-> (categorize-data "xinjiang_weibo_segs" "xinjiang_weibo_integrate" [2014 5 1] [2014 5 30]
+                 "D:/data/xinjiang/词纲.xlsx" "人物" "情绪" "事态")
+    (write-excel "话题分类" "D:/data/xinjiang/weibo话题分类.xlsx"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -643,6 +654,17 @@
       (csv/write-csv out (vector (map name keys-vec)))
       (doseq [v vals-vecs]
         (csv/write-csv out (vector v))))))
+
+(defn write-csv-quoted
+  [coll file]
+  (let [keys-vec (keys (first coll))
+        vals-vecs (map (apply juxt keys-vec) coll)]
+    (with-open [out (io/writer file)]
+      (binding [*out* out]
+        (print (clj-csv/write-csv (vector (map name keys-vec)) :force-quote true))
+        (doseq [v vals-vecs]
+          (let [v (map str v)]
+            (print (clj-csv/write-csv (vector v) :force-quote true))))))))
 
 ;(write-csv [{:a 2 :b 3} {:a 4 :b 5}] "D:/data/test_write_csv.csv")
 
@@ -728,17 +750,55 @@
    :userId (:userId entry)})
 
 (def connection-2
-  (mg/connect {:host "192.168.1.184" :port 27017}))
+  (mg/connect {:host "192.168.1.184" :port 7017}))
 
-(def db-2 (mg/get-db connection-2 "megausers"))
+(def db-2 (mg/get-db connection-2 "lighttable"))
 
 (defn megauser [] (mmc/find-maps db-2 "users"))
 
-;(defn gameuser [] (mc/find-maps "game_weibo_user"))
+(defn world_cup_user [] (mmc/find-maps db-2 "world_cup_weibo_user"))
 
-;(write-excel (map extract-user (gameuser)) "微博用户信息" "D:/data/game/微博用户信息.xlsx")
+;(write-excel (map extract-user (xinjianguser)) "微博用户信息" "D:/data/xinjiang/微博用户信息.xlsx")
 
 ;(write-csv (map extract-user (megauser)) "D:/data/fucked2.csv")
+
+;(write-csv-quoted (map extract-user (world_cup_user)) "D:/data/world_cup/weibouser.csv")
+
+#_(doseq [u (map extract-user (xianjian10yearuser))]
+  (mc/insert "xianjian10year_user_estimated" u))
+
+#_(doseq [u (map extract-user (megauser))]
+  (mc/insert "mega_user_estimated" u))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;age statistics;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn data-input [collection]
+  (->> (mc/find-maps collection {} {:age_estimated 1 :_id 0})
+       (map :age_estimated)
+       (remove nil?)))
+
+(def age-group
+  (map #(apply sorted-set %) (partition-all 3 (range 1 100))))
+
+
+(defn find-group
+  [age]
+  (some #(when (get % age) %) age-group))
+
+(defn group-stats
+  [data]
+  (let [groups (group-by find-group data)]
+    (let [a (->> (map vector (keys groups) (map count (vals groups)))
+                 (clojure.core/sort #(compare (ffirst %1) (ffirst %2))))]
+      (map vector (map #(str (first %) "~" (last %)) (map first a)) (map last a)))))
+
+
+;(group-stats (data-input "xianjian10year_user_estimated"))
+
+#_(->> {"年龄分布" (group-stats (data-input "mega_user_estimated"))}
+     (build-workbook (workbook-xssf))
+     (#(save % "D:/data/xianjian10year/mega_user_age.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -804,23 +864,24 @@
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
-#_(->> (mc/find-maps "game_baidunews_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
+#_(->> (mc/find-maps "xinjiang_baidunews_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
                                         :source 1 :origin 1})
      (map #(select-keys % [:pubdate :sent-base :sentiment :preview :title :similar :source :keyword :origin]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "新闻" "D:/data/game/新闻列表.xlsx"))
+     (#(write-excel % "新闻" "D:/data/xinjiang/新闻列表.xlsx"))
      )
 
 ;(insert-by-part "game_baidutieba_sample" (sampling/sample-percent 0.1 (mc/find "game_baidutieba_integrate")))
 
 ;(insert-by-part "game_baidutieba_segs" (mc/find-maps "game_tianya_segs"))
 
-#_(->> (mc/find-maps "game_baidutieba_sample" {} {:_id 0 :mid 0 :word-seg 0})
+#_(->> (mc/find-maps "world_cup_tianya_integrate" {} {:_id 0 :mid 0 :word-seg 0})
    (map #(select-keys % [:pubdate :url :user :level :sent-base :sentiment :text :title :source :keyword]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "social" "D:/data/game/tieba列表.xlsx")))
+     (#(write-csv-quoted % "D:/data/world_cup/tianya列表.csv"))
+     )
 
 
 #_(insert-by-part "game_test3"
@@ -828,6 +889,7 @@
   (find {})
   (skip 200000)
   (limit 200000)))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;;;;;

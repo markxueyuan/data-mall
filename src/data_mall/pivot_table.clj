@@ -37,6 +37,15 @@
     (for [entry groups]
       (stats pivots ks fns entry))))
 
+(defn lazy-pivot-table
+  [pivots ks fns resultsets]
+  (let [rels (into pivots ks)
+        rows (map #(map % rels) resultsets)
+        maps (map #(zipmap rels %) rows)
+        groups (group-by (apply juxt pivots) maps)]
+    (map  #(stats pivots ks fns %) groups)))
+
+
 (defn ->num [i]
   (if (integer? i)
     (double i)
