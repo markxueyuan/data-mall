@@ -14,6 +14,18 @@
            org.bson.types.ObjectId
            java.util.ArrayList))
 
+(defn parse-date
+  [string]
+  (let [fmt (f/formatter (t/default-time-zone) "yyyy-MM-dd HH:mm:ss" "yyyy-MM-dd HH:mm" "yyyy-MM-dd" "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")]
+    (->> (correct-nil string)
+         (f/parse fmt))))
+
+(defn unparse-date
+  [time]
+  (let [fmt (f/formatter (t/default-time-zone) "yyyy-MM-dd HH:mm:ss" "yyyy-MM-dd HH:mm" "yyyy-MM-dd" "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")]
+    (f/unparse fmt time)))
+
+
 ;connect to db
 
 (mg/connect!)

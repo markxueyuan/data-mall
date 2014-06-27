@@ -735,8 +735,15 @@
           life (t/in-days (t/interval (parse-date reg) (t/now)))]
       (double (/ active life)))))
 
+(defn match-keyword
+  [entry from]
+  (let [match (mc/find-one-as-map from {:userId (:userId entry)} {:_id 0 "opts.keyword" 1})]
+    (:keyword (:opts match))))
+
+(mc/find-one-as-map "world_cup_weibo_his" {:userId "1169939862"} {:_id 0, "opts.keyword" 1})
+
 (defn extract-user
-  [entry]
+  ([entry]
   {:fans_numbers (:粉丝 entry)
    :active_score (active-level entry)
    :credit (:信用等级 entry)
@@ -748,6 +755,9 @@
    :gender (:性别 entry)
    :userName (:昵称 entry)
    :userId (:userId entry)})
+  ([entry from]
+   (mc/ensure-index from {:userId 1})
+   (assoc (extract-user entry) :keyword (match-keyword entry from))))
 
 (def connection-2
   (mg/connect {:host "192.168.1.184" :port 7017}))
@@ -767,8 +777,10 @@
 #_(doseq [u (map extract-user (xianjian10yearuser))]
   (mc/insert "xianjian10year_user_estimated" u))
 
-#_(doseq [u (map extract-user (megauser))]
-  (mc/insert "mega_user_estimated" u))
+#_(doseq [u (map #(extract-user % "world_cup_weibo_his") (world_cup_user))]
+  (mc/insert "world_cup_user_all_keyworded" u))
+
+(write-csv-quoted (mc/find-maps "world_cup_user_all_keyworded") "D:/data/world_cup/user_all")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;age statistics;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
