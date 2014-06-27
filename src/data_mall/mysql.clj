@@ -53,9 +53,10 @@
         (let [head (first t)
               tail (+ (last t) 1)
               sql (str "select * from " sql-table sql-snippet " limit " head ", " tail)
-              input (do (println sql) (j/query sql-spec [sql]))]
-          (println input)
-          (mmc/insert-batch mongo-spec mongo-collection input)))
+              input  (j/query sql-spec [sql])]
+          (do
+          (mmc/insert-batch mongo-spec mongo-collection input)
+            (println (apply count input)))))
       [first-id last-id]))
    ([sql-spec sql-table mongo-spec mongo-collection start-date end-date]
     (let [sql-snippet (str " where publish_time >= '" start-date
@@ -70,5 +71,4 @@
 (sql-to-mongo sql-spec "news" mongo-spec "news" "2014-6-10" "2014-6-12")
 
 
-
-(j/query sql-spec ["select * from news where publish_time <= '2014-6-13' limit 0, 1"])
+(count (j/query sql-spec ["select * from news where publish_time <= '2014-6-13' limit 0, 1"]))
