@@ -30,6 +30,11 @@
    :user "root"
    :password "eura_ds"})
 
+(def sqlite-db
+  {:classname "org.sqlite.JDBC"
+   :subprotocol "sqlite"
+   :subname "D:/data/db"})
+
 (def aa
   (with-open [con (jdbc/get-connection db-spec)]
     (let [db-con (jdbc/add-connection db-spec con)]
@@ -37,7 +42,7 @@
 
 ;(incanter/view aa)
 
-
+;(jdbc/query sqlite-db ["select * from vocabs_TB where word = 'commune'"])
 
 #_(def bb
   (jdbc/query db-spec ["select * from student"]))

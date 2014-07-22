@@ -428,41 +428,41 @@
 
 ;贴吧
 
-;(def tieba-source {:tieba ["world_cup_tieba_baidu_meta" "world_cup_tieba_content_10p" :encrypedLink :url]})
+;(def tieba-source {:tieba ["biaoge_baidu_for_tieba" "biaoge_tieba_contents" :encrypedLink :url]})
 
-;(write-result tieba-source "world_cup_tieba_integrate" "world_cup_tieba_segs")
+;(write-result tieba-source "biaoge_tieba_integrate" "biaoge_tieba_segs")
 
 ;百度-贴吧
 
-;(def baidu-tieba-source {:baidu-tieba ["game_baidu_realtime" "game_baidutieba_content" :encrypedLink :url :p5-on]})
+;(def baidu-tieba-source {:baidu-tieba ["transformers4_baidu_for_tieba" "transformers4_tieba_contents" :encrypedLink :url :p5-on]})
 
-;(write-result baidu-tieba-source "game_tiebaintegrate" "game_tiebasegs")
+;(write-result baidu-tieba-source "transformers4_tiebaintegrate" "transformers4_tiebasegs")
 
 ;百度-天涯
 
-#_(def baidu-tianya-source {:baidu-tianya ["baidurealtime_tianya" "tianya_content" :encrypedLink :url :p5-on]})
+;(def baidu-tianya-source {:baidu-tianya ["transformers4_baidu_for_tianya" "transformers4_tianya_contents" :encrypedLink :url :p5-on]})
 
 ;(def filters (filt (partial time-filter [2013 10 1] [2014 4 1])
                    ;(partial text-filter (black-list "D:/data/blacklist.txt") :text)
                    ;))
 
-#_(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
+;(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;天涯
-;(def tianya-source {:tianya ["world_cup_tianya_baidu_meta" "world_cup_tianya_content_10p" :encrypedLink :url]})
+;(def tianya-source {:tianya ["biaoge_baidu_for_tianya" "biaoge_tianya_contents" :encrypedLink :url]})
 
-;(write-result tianya-source "world_cup_tianya_integrate" "world_cup_tianya_segs")
+;(write-result tianya-source "tbiaoge_tianya_integrate" "biaoge_tianya_segs")
 
 ;微博
-;(def weibo-source {:weibo ["world_cup_weibo_his"]})
+(def weibo-source {:weibo ["biaoge_weibo_content"]})
 
-;(write-result weibo-source "world_cup_weibo_integrate" "world_cup_weibo_segs")
+(write-result weibo-source "biaoge_weibo_integrate" "biaoge_weibo_segs")
 
 ;百度新闻
 
-;(def baidunews-source {:baidu-news ["xinjiang_baidunews_history_generic" "xinjiang_baidunews_history" :url :url]})
+;(def baidunews-source {:baidu-news ["biaoge_baidunews_generic" "biaoge_baidunews_items" :url :url]})
 
-;(write-result baidunews-source "xinjiang_baidunews_integrate" "xinjiang_baidunews_segs")
+;(write-result baidunews-source "biaoge_baidunews_integrate" "biaoge_baidunews_segs")
 
 ;整合
 
@@ -537,7 +537,7 @@
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
-;(write-csv-quoted (word-list "world_cup_tianya_segs") "D:/data/world_cup/tianya分词.csv")
+;(write-csv-quoted (word-list "biaoge_tianya_segs") "D:/data/biaoge/tianya分词.csv")
 
 ;(write-csv-quoted (lazy-word-list "world_cup_tianya_segs") "D:/data/world_cup/tianya分词.csv")
 
@@ -740,7 +740,7 @@
   (let [match (mc/find-one-as-map from {:userId (:userId entry)} {:_id 0 "opts.keyword" 1})]
     (:keyword (:opts match))))
 
-(mc/find-one-as-map "world_cup_weibo_his" {:userId "1169939862"} {:_id 0, "opts.keyword" 1})
+;(mc/find-one-as-map "world_cup_weibo_his" {:userId "1169939862"} {:_id 0, "opts.keyword" 1})
 
 (defn extract-user
   ([entry]
@@ -760,27 +760,27 @@
    (assoc (extract-user entry) :keyword (match-keyword entry from))))
 
 (def connection-2
-  (mg/connect {:host "192.168.1.184" :port 7017}))
+  (mg/connect {:host "192.168.1.184" :port 27017}))
 
-(def db-2 (mg/get-db connection-2 "lighttable"))
+(def db-2 (mg/get-db connection-2 "megausers"))
 
 (defn megauser [] (mmc/find-maps db-2 "users"))
 
-(defn world_cup_user [] (mmc/find-maps db-2 "world_cup_weibo_user"))
+(defn biaoge_user [] (mc/find-maps "biaoge_weibo_user"))
 
 ;(write-excel (map extract-user (xinjianguser)) "微博用户信息" "D:/data/xinjiang/微博用户信息.xlsx")
 
 ;(write-csv (map extract-user (megauser)) "D:/data/fucked2.csv")
 
-;(write-csv-quoted (map extract-user (world_cup_user)) "D:/data/world_cup/weibouser.csv")
+;(write-csv-quoted (map extract-user (biaoge_user)) "D:/data/biaoge/weibouser.csv")
 
-#_(doseq [u (map extract-user (xianjian10yearuser))]
-  (mc/insert "xianjian10year_user_estimated" u))
+#_(doseq [u (map extract-user (biaoge_user))]
+  (mc/insert "biaoge_user_estimated" u))
 
 #_(doseq [u (map #(extract-user % "world_cup_weibo_his") (world_cup_user))]
   (mc/insert "world_cup_user_all_keyworded" u))
 
-(write-csv-quoted (mc/find-maps "world_cup_user_all_keyworded") "D:/data/world_cup/user_all")
+;(write-csv-quoted (mc/find-maps "world_cup_user_all_keyworded") "D:/data/world_cup/user_all")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;age statistics;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -810,7 +810,7 @@
 
 #_(->> {"年龄分布" (group-stats (data-input "mega_user_estimated"))}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/xianjian10year/mega_user_age.xlsx")))
+     (#(save % "D:/data/biaoge/mega_user_age.xlsx")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -876,23 +876,23 @@
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
-#_(->> (mc/find-maps "xinjiang_baidunews_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
+#_(->> (mc/find-maps "biaoge_baidunews_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
                                         :source 1 :origin 1})
      (map #(select-keys % [:pubdate :sent-base :sentiment :preview :title :similar :source :keyword :origin]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "新闻" "D:/data/xinjiang/新闻列表.xlsx"))
+     (#(write-excel % "新闻" "D:/data/biaoge/新闻列表.xlsx"))
      )
 
 ;(insert-by-part "game_baidutieba_sample" (sampling/sample-percent 0.1 (mc/find "game_baidutieba_integrate")))
 
 ;(insert-by-part "game_baidutieba_segs" (mc/find-maps "game_tianya_segs"))
 
-#_(->> (mc/find-maps "world_cup_tianya_integrate" {} {:_id 0 :mid 0 :word-seg 0})
+#_(->> (mc/find-maps "biaoge_tieba_integrate" {} {:_id 0 :mid 0 :word-seg 0})
    (map #(select-keys % [:pubdate :url :user :level :sent-base :sentiment :text :title :source :keyword]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-csv-quoted % "D:/data/world_cup/tianya列表.csv"))
+     (#(write-csv-quoted % "D:/data/biaoge/tieba列表.csv"))
      )
 
 
