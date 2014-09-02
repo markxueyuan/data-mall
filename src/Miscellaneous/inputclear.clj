@@ -76,14 +76,15 @@
   (let [db (mg/get-db connection db)]
     (->> coll
          (map col)
+         (map #(str "http:" %))
          distinct
          (map #(assoc {} :_id %))
          (mmc/insert-batch db collection))))
 
-#_(->> (mmc/find-maps db "biaoge_baidu_for_tianya" {:p5 {"$lte" 50}})
-     (time-filter [2014 7 6] [2014 7 16] :date)
+#_(->> (mmc/find-maps db "guomeimei_tianya_item" {:p5 {"$lte" 800}})
+     (time-filter [2014 8 1] [2014 8 7] :date)
      p5-filter
-     (insert-clean-url "gu_chain" "biaoge_tianya" :encrypedLink))
+     (insert-clean-url "gu_chain" "guomeimei_tianya" :encrypedLink))
 
 
 

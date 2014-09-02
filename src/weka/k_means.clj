@@ -77,7 +77,7 @@
 
 ;the whole shit is just this:
 
-#_(def a (->options "-N" 3 "-I" 100 "-S" 1 "-A" (.getName EuclideanDistance)))
+#_(def a (r/->options "-N" 3 "-I" 100 "-S" 1 "-A" (.getName EuclideanDistance)))
 
 #_(doto (SimpleKMeans.)
   (.setOptions a)
@@ -93,7 +93,7 @@
 #_(.getCapabilities b)
 
 ;condp
-(condp some [1 2 3 4]
+#_(condp some [1 2 3 4]
   #{0 6 7} :>> inc
   #{5 9} :>> dec
   #{8 10} :>> #(+ % 3)
@@ -101,7 +101,7 @@
   )
 
 ;map-indexed
-(map-indexed (fn [index item] [index item]) "hello")
-(map-indexed vector "hello")
+#_(map-indexed (fn [index item] [index item]) "hello")
+#_(map-indexed vector "hello")
 
 

@@ -303,7 +303,8 @@
   (->> collection
        (map #(select-keys % [:word-seg :source :mid :pubdate :_id :keyword :date]))
        (map unwind)
-       (apply concat)
+       ;(apply concat)
+       flatten
        (filter #(> (count (:word %)) 1))
        (map #(syn/han :nature %))
        (map #(assoc (dissoc % :_id) :mid2 (:_id %)))))
@@ -428,9 +429,9 @@
 
 ;贴吧
 
-;(def tieba-source {:tieba ["biaoge_baidu_for_tieba" "biaoge_tieba_contents" :encrypedLink :url]})
+;(def tieba-source {:tieba ["guomeimei_tieba_item" "guomeimei_tieba_content" :encrypedLink :url]})
 
-;(write-result tieba-source "biaoge_tieba_integrate" "biaoge_tieba_segs")
+;(write-result tieba-source "guomeimei_tieba_integrate" "guomeimei_tieba_segs")
 
 ;百度-贴吧
 
@@ -440,7 +441,7 @@
 
 ;百度-天涯
 
-;(def baidu-tianya-source {:baidu-tianya ["transformers4_baidu_for_tianya" "transformers4_tianya_contents" :encrypedLink :url :p5-on]})
+;(def baidu-tianya-source {:baidu-tianya ["the_continent_tianya_item" "the_continent_tianya_content" :encrypedLink :url :p5-on]})
 
 ;(def filters (filt (partial time-filter [2013 10 1] [2014 4 1])
                    ;(partial text-filter (black-list "D:/data/blacklist.txt") :text)
@@ -449,20 +450,20 @@
 ;(write-result baidu-tianya-source edu-filter "xuetestintegrate" "xuetestsegs")
 
 ;天涯
-;(def tianya-source {:tianya ["biaoge_baidu_for_tianya" "biaoge_tianya_contents" :encrypedLink :url]})
+;(def tianya-source {:tianya ["guomeimei_tianya_item" "guomeimei_tianya_content" :encrypedLink :url]})
 
-;(write-result tianya-source "tbiaoge_tianya_integrate" "biaoge_tianya_segs")
+;(write-result tianya-source "guomeimei_tianya_integrate" "guomeimei_tianya_segs")
 
 ;微博
-(def weibo-source {:weibo ["biaoge_weibo_content"]})
+;(def weibo-source {:weibo ["guomeimei_weibo_content"]})
 
-(write-result weibo-source "biaoge_weibo_integrate" "biaoge_weibo_segs")
+;(write-result weibo-source "guomeimei_weibo_integrate" "guomeimei_weibo_segs")
 
 ;百度新闻
 
-;(def baidunews-source {:baidu-news ["biaoge_baidunews_generic" "biaoge_baidunews_items" :url :url]})
+;(def baidunews-source {:baidu-news ["the_continent_news_generic" "the_continent_news_item" :url :url]})
 
-;(write-result baidunews-source "biaoge_baidunews_integrate" "biaoge_baidunews_segs")
+;(write-result baidunews-source "the_continent_baidunews_integrate" "the_continent_baidunews_segs")
 
 ;整合
 
@@ -537,7 +538,7 @@
 
 ;(write-excel (word-list "xuetestsegs" "专有名词") "专有名词" "D:/data/专有名词.xlsx")
 
-;(write-csv-quoted (word-list "biaoge_tianya_segs") "D:/data/biaoge/tianya分词.csv")
+;(write-csv-quoted (word-list "the_continent_weibo_segs") "D:/data/houhuiwuqi/weibo分词.csv")
 
 ;(write-csv-quoted (lazy-word-list "world_cup_tianya_segs") "D:/data/world_cup/tianya分词.csv")
 
@@ -766,16 +767,16 @@
 
 (defn megauser [] (mmc/find-maps db-2 "users"))
 
-(defn biaoge_user [] (mc/find-maps "biaoge_weibo_user"))
+(defn houhuiwuqi_user [] (mc/find-maps "the_continent_weibo_user"))
 
 ;(write-excel (map extract-user (xinjianguser)) "微博用户信息" "D:/data/xinjiang/微博用户信息.xlsx")
 
 ;(write-csv (map extract-user (megauser)) "D:/data/fucked2.csv")
 
-;(write-csv-quoted (map extract-user (biaoge_user)) "D:/data/biaoge/weibouser.csv")
+;(write-csv-quoted (map extract-user (houhuiwuqi_user)) "D:/data/houhuiwuqi/weibouser.csv")
 
-#_(doseq [u (map extract-user (biaoge_user))]
-  (mc/insert "biaoge_user_estimated" u))
+#_(doseq [u (map extract-user (houhuiwuqi_user))]
+  (mc/insert "the_continent_user_estimated" u))
 
 #_(doseq [u (map #(extract-user % "world_cup_weibo_his") (world_cup_user))]
   (mc/insert "world_cup_user_all_keyworded" u))
@@ -808,9 +809,40 @@
 
 ;(group-stats (data-input "xianjian10year_user_estimated"))
 
-#_(->> {"年龄分布" (group-stats (data-input "mega_user_estimated"))}
-     (build-workbook (workbook-xssf))
-     (#(save % "D:/data/biaoge/mega_user_age.xlsx")))
+#_(->> {"年龄分布" (group-stats (data-input "the_continent_user_estimated"))}
+       (build-workbook (workbook-xssf))
+       (#(save % "D:/data/houhuiwuqi/the_continent_user_age.xlsx")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;tag statistics;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn tag-stats
+  [coll col]
+  (->> (map col coll)
+       (map #(string/split % #"\s+"))
+       flatten
+       (map #(assoc {} :tags %))
+       (pt/pivot-table [:tags] [:counts] [count])
+       (clojure.core/sort #(> (:counts %1) (:counts %2)))))
+
+#_(-> (mc/find-maps "the_continent_user_estimated")
+    (tag-stats :tags)
+    (write-csv-quoted "D:/data/houhuiwuqi/the_continent_tags_stats.csv"))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; other statistics;;;;;;;;;;;;;;;;;;;;;
+
+(defn ordinary-stats
+  [coll col]
+  (pt/pivot-table [col] [:counts] [count] coll))
+
+#_(doseq [col [:gender :province :edu_level_estimated]]
+  (-> (mc/find-maps "the_continent_user_estimated")
+      (ordinary-stats col)
+      (write-csv-quoted (str "D:/data/houhuiwuqi/stats_" (name col) ".csv")
+                        )))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;working zone;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -876,23 +908,23 @@
               "D:/data/星星分词0402.xlsx"
               "人物" "概念" "描述"))
 
-#_(->> (mc/find-maps "biaoge_baidunews_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
+#_(->> (mc/find-maps "the_continent_baidunews_integrate" {} {:_id 0 :pubdate 1 :title 1 :sentiment 1 :sent-base 1 :similar 1 :keyword 1 :preview 1
                                         :source 1 :origin 1})
      (map #(select-keys % [:pubdate :sent-base :sentiment :preview :title :similar :source :keyword :origin]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-excel % "新闻" "D:/data/biaoge/新闻列表.xlsx"))
+     (#(write-excel % "新闻" "D:/data/houhuiwuqi/新闻列表.xlsx"))
      )
 
 ;(insert-by-part "game_baidutieba_sample" (sampling/sample-percent 0.1 (mc/find "game_baidutieba_integrate")))
 
 ;(insert-by-part "game_baidutieba_segs" (mc/find-maps "game_tianya_segs"))
 
-#_(->> (mc/find-maps "biaoge_tieba_integrate" {} {:_id 0 :mid 0 :word-seg 0})
+#_(->> (mc/find-maps "the_continent_tianya_integrate" {} {:_id 0 :mid 0 :word-seg 0})
    (map #(select-keys % [:pubdate :url :user :level :sent-base :sentiment :text :title :source :keyword]))
      (map #(assoc % :pubdate (unparse-date (:pubdate %))))
      (map #(assoc % :sent-base (str (string/join " " (:sent-base %)) " ")))
-     (#(write-csv-quoted % "D:/data/biaoge/tieba列表.csv"))
+     (#(write-csv-quoted % "D:/data/houhuiwuqi/tianya列表.csv"))
      )
 
 

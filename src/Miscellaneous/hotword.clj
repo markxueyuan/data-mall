@@ -126,16 +126,16 @@
   (make-day-range [2014 4 8] [2014 5 5]))
 
 (def dayrange
-  (make-day-range [2014 7 6] [2014 7 16]))
+  (make-day-range [2014 7 24] [2014 7 30]))
 
 
-#_(->> {"热词" (print-hot-word "biaoge_tieba_segs" dayrange 100 3)}
+(->> {"热词" (print-hot-word "the_continent_tieba_segs" dayrange 100 3)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/biaoge/tiebahotword.xlsx")))
+     (#(save % "D:/data/houhuiwuqi/tiebahotword.xlsx")))
 
-#_(->> {"热词" (print-hot-word "biaoge_baidunews_segs" dayrange 100 3)}
+(->> {"热词" (print-hot-word "the_continent_baidunews_segs" dayrange 100 3)}
      (build-workbook (workbook-xssf))
-     (#(save % "D:/data/biaoge/newshotword.xlsx")))
+     (#(save % "D:/data/houhuiwuqi/newshotword.xlsx")))
 
 
 ;;;;;;;;;;;;;;;;;;tips;;;;;;;;;;;;;;;;;;;;
